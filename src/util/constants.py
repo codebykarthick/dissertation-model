@@ -1,6 +1,6 @@
 CONSTANTS = {
     "models": {
-        "cnn": "NA",
+        "cnn": "224x224",
         "mobilenetv3": "224x224",
         "efficientnet": "224x224",
         "shufflenet": "224x224",
@@ -13,5 +13,5 @@ CONSTANTS = {
     },
     "weights_path": "/weights",
     "results_path": "/results",
-    "learning_rate": 1e-4
+    "train_split": 0.7
 }

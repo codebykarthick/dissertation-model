@@ -6,36 +6,52 @@ import os
 import torch
 from tqdm import tqdm
 from util.constants import CONSTANTS
+from util.cloud_tools import auto_shutdown
 from util.data_loader import get_data_loaders
 from util.logger import setup_logger
-from util.screen_tools import get_weight_for_model
+import sys
 
 log = setup_logger()
 
 
 class Runner:
-    def __init__(self, model, model_name):
+    def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
+                 dimensions: list[int, int], is_loss_weighted: bool, is_oversampled: bool,
+                 file_name: str, batch_size: int):
         self.model = model
         self.model_name = model_name
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else "cpu"
-        self.train_loader, self.val_loader, self.test_loader = get_data_loaders()
-        self.criterion = torch.nn.BCELoss()
-        learning_rate = CONSTANTS["learning_rate"]
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=learning_rate)
 
-    def train(self, epochs=30):
+        # Dimensions is passed here so that we get the appropriate images for training
+        # TODO: Fix the additional args required
+        self.train_loader, self.val_loader, self.test_loader = get_data_loaders(
+            dimensions=dimensions, is_sampling_weighted=is_oversampled, batch_size=batch_size)
+
+        if is_loss_weighted:
+            # TODO: Fix weighted loss
+            pos_weight = torch.tensor([5.0], device=self.device)
+            self.criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+        else:
+            self.criterion = torch.nn.BCELoss()
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=lr)
+        self.epochs = epochs
+        self.file_name = file_name
+
+    def train(self):
         """
         Run the training loop for the loaded model for the specified epochs
         """
+        log.info(
+            f"Training {self.model_name} model, for {self.epochs} epochs.")
         self.model.to(self.device)
         self.model.train()
 
         best_val_loss = float('inf')
-        for epoch in range(epochs):
+        for epoch in range(self.epochs):
             epoch_loss = 0.0
-            for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{epochs}', leave=False):
+            for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
                 images = images.to(self.device)
                 labels = labels.to(self.device)
 
@@ -52,7 +68,7 @@ class Runner:
             # Validate after each epoch
             val_loss = self.validate()
             log.info(
-                f"Epoch {epoch+1}/{epochs}, Training Loss: {avg_loss:.4f}, Validation Loss: {val_loss:.4f}")
+                f"Epoch: {epoch+1}/{self.epochs}, Training Loss: {avg_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -80,6 +96,7 @@ class Runner:
         Load the model weights and evaluate the model on the test set 
         and return the average test loss.
         """
+        log.info(f"Evaluating {self.model_name} model on the test set.")
         self.load_model()
 
         self.model.eval()
@@ -117,11 +134,20 @@ class Runner:
         torch.save(self.model.state_dict(), model_filepath)
         log.info(f"Model saved at: {model_filepath}")
 
+    def get_model_filepath(self) -> str:
+        model_weights_path = os.path.join(
+            os.getcwd(), CONSTANTS['weights_path'], self.model_name, self.file_name)
+
+        if not os.path.exists(model_weights_path):
+            log.error(
+                'Weights path does not exist to load model (probably no training happened).')
+            sys.exit(1)
+
     def load_model(self):
         """
         Load the model weights from a pth file in weights/ directory
         """
-        model_filepath = get_weight_for_model(self.model_name)
+        model_filepath = self.get_model_filepath()
         state_dict = torch.load(model_filepath, map_location=self.device)
         self.model.load_state_dict(state_dict)
         self.model.to(self.device)
@@ -130,9 +156,10 @@ class Runner:
 
 def create_model_from_name(name):
     """
-    Create the model instance from the name provided in the arguments.
+    Create the model instance from the name provided in the arguments. Also
+    returns the dimensions required for resizing.
     """
-    model = None
+
     if name == "cnn":
         model = LFD_CNN()
     elif name == "mobilenetv3":
@@ -140,7 +167,9 @@ def create_model_from_name(name):
     elif name == "efficientnet":
         model = get_efficientnet()
 
-    return model
+    dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
+
+    return model, dimensions
 
 
 if __name__ == "__main__":
@@ -150,14 +179,55 @@ if __name__ == "__main__":
                         help='List of models to train, save, or evaluate')
     parser.add_argument('--mode', choices=['train', 'evaluate', 'export'],
                         required=True, help='Mode of operation: train, evaluate for performance benchmark or export for mobile app.')
+    parser.add_argument('--lr', type=float, default=1e-4,
+                        help='learning rate for training')
+    parser.add_argument('--batch', type=int, default=8,
+                        help='Set the size of the batch for training and inference.')
+    parser.add_argument('--epochs', type=int, default=30,
+                        help='Number of epochs to train')
+    parser.add_argument(
+        '--file', type=str, help='File name of model weights to use when evaluating')
+    parser.add_argument('--weighted_loss', action='store_true',
+                        help='Enable weighted loss to handle class imbalance')
+    parser.add_argument('--weighted_sampling', action='store_true',
+                        help='Enable weighted sampling for training data')
+    parser.add_argument("--env", type=str, choices=["local", "cloud"], default="local",
+                        help="Cloud mode has a special shutdown sequence to save resources.")
+    parser.add_argument("--copy_dir", type=str,
+                        help="Directory where logs and weights folder will be copied (required if env is cloud)")
+
     args = parser.parse_args()
+
+    # Manual validation of the supplied arguments
+    if args.mode == 'evaluate' or args.mode == 'export':
+        if not args.file:
+            parser.error(
+                '--file has to be specified when the mode is evaluate or export')
+    if args.weighted_loss == True:
+        if args.weighted_sampling == True:
+            parser.error(
+                'Either one of weighted loss or weighted sampling can be set True at a time.')
+    if args.env == "cloud":
+        if not args.copy_dir:
+            parser.error("--copy_dir is required when env is cloud")
+        elif not os.path.exists(args.copy_dir):
+            log.error("The copy directory does not exist, halting execution.")
+            sys.exit(1)
 
     list_of_models = args.models
     mode = args.mode
+    lr = args.lr
+    epochs = args.epochs
+    weighted_loss = args.weighted_loss
+    weighted_sampling = args.weighted_sampling
+    file_name = args.file
+    batch_size = args.batch
 
     for model_name in list_of_models:
-        model = create_model_from_name(model_name)
-        runner = Runner(model=model)
+        model, dimensions = create_model_from_name(model_name)
+        runner = Runner(model=model, lr=lr, epochs=epochs,
+                        dimensions=dimensions, is_loss_weighted=weighted_loss,
+                        is_oversampled=weighted_sampling, batch_size=batch_size)
 
         if mode == "train":
             runner.train()
@@ -165,3 +235,6 @@ if __name__ == "__main__":
             runner.test()
         elif mode == "export":
             runner.export()
+
+    if args.env == "cloud":
+        auto_shutdown(args.copy_dir)
