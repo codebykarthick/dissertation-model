@@ -11,7 +11,7 @@ CONSTANTS = {
         "efficientvit": "224x224",
         "convnext-small": "224x224"
     },
-    "weights_path": "/weights",
-    "results_path": "/results",
+    "weights_path": "weights",
+    "results_path": "results",
     "train_split": 0.7
 }

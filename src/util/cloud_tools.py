@@ -41,7 +41,7 @@ def auto_shutdown(copy_dir: str = "/mnt/ai"):
 
     # Create a new folder with the current timestamp
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    new_folder = os.path.join(copy_dir, "cv_coursework", f"run_{timestamp}")
+    new_folder = os.path.join(copy_dir, "dissertation", f"run_{timestamp}")
     os.makedirs(new_folder, exist_ok=True)
 
     log.info(f"Saving backup to {new_folder}")

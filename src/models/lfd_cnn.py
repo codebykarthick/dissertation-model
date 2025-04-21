@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class LFD_CNN(nn.module):
+class LFD_CNN(nn.Module):
     """
     Bespoke lightweight architecture for generating the probability of positives.
     """

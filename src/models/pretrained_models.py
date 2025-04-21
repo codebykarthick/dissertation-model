@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
+from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights
 
 
 def get_mobilenetv3():
@@ -7,17 +8,17 @@ def get_mobilenetv3():
     Get a mobilenet v3 model with all layers frozen except for final and
     output layer for finetuning.
     """
-    model = models.mobilenet_v3_large(pretrained=True)
+    model = models.mobilenet_v3_large(
+        weights=MobileNet_V3_Large_Weights.DEFAULT)
 
     # Optionally, freeze the feature extraction layers to only fine-tune the classifier
     for param in model.features.parameters():
         param.requires_grad = False
 
     # Replace the classifier with a new linear layer for binary classification
-    in_features = model.classifier[-1].in_features
+    in_features = model.classifier[0].in_features
     model.classifier = nn.Sequential(
-        nn.Linear(in_features, 1),
-        nn.Sigmoid()
+        nn.Linear(in_features, 1)
     )
 
     return model
@@ -41,8 +42,7 @@ def get_efficientnet():
     in_features = model.classifier[1].in_features
     model.classifier = nn.Sequential(
         nn.Dropout(p=0.2, inplace=True),
-        nn.Linear(in_features, 1),
-        nn.Sigmoid()
+        nn.Linear(in_features, 1)
     )
 
     return model

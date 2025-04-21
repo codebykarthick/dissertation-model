@@ -7,33 +7,36 @@ import torch
 from tqdm import tqdm
 from util.constants import CONSTANTS
 from util.cloud_tools import auto_shutdown
-from util.data_loader import get_data_loaders
+from util.data_loader import get_data_loaders, generate_transforms
 from util.logger import setup_logger
 import sys
+import json
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 log = setup_logger()
 
 
 class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
-                 dimensions: list[int, int], is_loss_weighted: bool, is_oversampled: bool,
-                 file_name: str, batch_size: int):
+                 is_loss_weighted: bool, is_oversampled: bool,
+                 batch_size: int, patience: int, defined_transforms, file_name: str):
         self.model = model
         self.model_name = model_name
+        self.patience = patience
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else "cpu"
+        img_path = os.path.join(os.getcwd(), 'dataset')
 
-        # Dimensions is passed here so that we get the appropriate images for training
-        # TODO: Fix the additional args required
-        self.train_loader, self.val_loader, self.test_loader = get_data_loaders(
-            dimensions=dimensions, is_sampling_weighted=is_oversampled, batch_size=batch_size)
+        self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
+            defined_transforms=defined_transforms, images_path=img_path,
+            is_sampling_weighted=is_oversampled, batch_size=batch_size)
 
         if is_loss_weighted:
-            # TODO: Fix weighted loss
-            pos_weight = torch.tensor([5.0], device=self.device)
-            self.criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+            self.criterion = torch.nn.BCEWithLogitsLoss(
+                pos_weight=self.pos_weight)
         else:
-            self.criterion = torch.nn.BCELoss()
+            self.criterion = torch.nn.BCEWithLogitsLoss()
+
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=lr)
         self.epochs = epochs
@@ -49,6 +52,7 @@ class Runner:
         self.model.train()
 
         best_val_loss = float('inf')
+        epochs_no_improve = 0
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
@@ -58,7 +62,7 @@ class Runner:
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
                 # Ensure labels are float for BCELoss
-                loss = self.criterion(outputs, labels.float())
+                loss = self.criterion(outputs, labels.view(-1, 1).float())
                 loss.backward()
                 self.optimizer.step()
                 epoch_loss += loss.item()
@@ -72,9 +76,16 @@ class Runner:
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
+                epochs_no_improve = 0
                 timestmp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                 model_file = f"{self.model_name}_{timestmp}_val_{val_loss:.4f}.pth"
                 self.save_model(model_file)
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= self.patience:
+                    log.info(
+                        f"Early stopping triggered after {epoch+1} epochs with no improvement.")
+                    break
 
     def validate(self):
         """Evaluate the model on the validation set and return the average loss"""
@@ -85,7 +96,7 @@ class Runner:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
-                loss = self.criterion(outputs, labels.float())
+                loss = self.criterion(outputs, labels.view(-1, 1).float())
                 total_loss += loss.item()
         avg_val_loss = total_loss / len(self.val_loader)
         self.model.train()  # Return to train mode
@@ -101,15 +112,44 @@ class Runner:
 
         self.model.eval()
         total_loss = 0.0
+        y_true = []
+        y_pred = []
         with torch.no_grad():
             for images, labels in self.test_loader:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
-                loss = self.criterion(outputs, labels.float())
+                loss = self.criterion(outputs, labels.view(-1, 1).float())
                 total_loss += loss.item()
+                preds = torch.sigmoid(outputs).view(-1) > 0.5
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
         avg_test_loss = total_loss / len(self.test_loader)
+        accuracy = accuracy_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred, zero_division=0)
+        recall = recall_score(y_true, y_pred, zero_division=0)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+
+        results = {
+            "model_name": self.model_name,
+            "weight_used": self.file_name,
+            "test_loss": avg_test_loss,
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1
+        }
+
+        results_dir = os.path.join(os.getcwd(), "results")
+        os.makedirs(results_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        results_path = os.path.join(
+            results_dir, f"{self.model_name}_{timestamp}_results.json")
+        with open(results_path, "w") as f:
+            json.dump(results, f, indent=4)
+
         log.info(f"Test Loss: {avg_test_loss:.4f}")
+        log.info(f"Test results saved at: {results_path}")
         return avg_test_loss
 
     def export(self):
@@ -127,6 +167,7 @@ class Runner:
             os.getcwd(), CONSTANTS["weights_path"], self.model_name)
 
         if not os.path.exists(model_weights_dir):
+            log.info(f"Creating folder at: {model_weights_dir}")
             os.makedirs(model_weights_dir, exist_ok=True)
 
         model_filepath = os.path.join(model_weights_dir, filename)
@@ -143,15 +184,18 @@ class Runner:
                 'Weights path does not exist to load model (probably no training happened).')
             sys.exit(1)
 
+        return model_weights_path
+
     def load_model(self):
         """
         Load the model weights from a pth file in weights/ directory
         """
         model_filepath = self.get_model_filepath()
+        log.info(f"Loading weights from: {model_filepath}")
         state_dict = torch.load(model_filepath, map_location=self.device)
         self.model.load_state_dict(state_dict)
         self.model.to(self.device)
-        log.info(f"Model loaded from: {model_filepath}")
+        log.info(f"Model loaded successfully!")
 
 
 def create_model_from_name(name):
@@ -166,6 +210,8 @@ def create_model_from_name(name):
         model = get_mobilenetv3()
     elif name == "efficientnet":
         model = get_efficientnet()
+    else:
+        log.info(f"{model} is not a valid model.")
 
     dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
 
@@ -173,6 +219,8 @@ def create_model_from_name(name):
 
 
 if __name__ == "__main__":
+    valid_models = ["mobilenetv3", "cnn", "efficientnet"]
+
     parser = argparse.ArgumentParser(
         description="Run models for training or evaluation")
     parser.add_argument('--models', nargs='+', required=True,
@@ -195,10 +243,16 @@ if __name__ == "__main__":
                         help="Cloud mode has a special shutdown sequence to save resources.")
     parser.add_argument("--copy_dir", type=str,
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
+    parser.add_argument("--patience", type=int,
+                        help="Patience for early stopping (default = 3)", default=3)
 
     args = parser.parse_args()
 
     # Manual validation of the supplied arguments
+    for model_name in args.models:
+        if model_name not in valid_models:
+            parser.error(
+                f"Invalid model name '{model_name}'. Valid options are: {', '.join(valid_models)}")
     if args.mode == 'evaluate' or args.mode == 'export':
         if not args.file:
             parser.error(
@@ -220,14 +274,16 @@ if __name__ == "__main__":
     epochs = args.epochs
     weighted_loss = args.weighted_loss
     weighted_sampling = args.weighted_sampling
-    file_name = args.file
+    file_name = args.file if args.file else ""
     batch_size = args.batch
+    patience = args.patience
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
-        runner = Runner(model=model, lr=lr, epochs=epochs,
-                        dimensions=dimensions, is_loss_weighted=weighted_loss,
-                        is_oversampled=weighted_sampling, batch_size=batch_size)
+        defined_transforms = generate_transforms(dimensions=dimensions)
+        runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
+                        is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
+                        defined_transforms=defined_transforms, model_name=model_name, file_name=file_name)
 
         if mode == "train":
             runner.train()
