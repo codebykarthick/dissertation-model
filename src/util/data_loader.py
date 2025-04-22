@@ -14,7 +14,6 @@ class ResizeAndPad:
         self.fill_with_noise = fill_with_noise
 
     def __call__(self, img):
-        original_size = img.size  # (width, height)
         # resize while keeping aspect ratio
         img.thumbnail(self.size, Image.Resampling.LANCZOS)
 
@@ -60,9 +59,8 @@ class ClassificationDataset(Dataset):
         return image, label
 
 
-def get_data_loaders(defined_transforms, images_path: str,
-                     is_sampling_weighted: bool, batch_size: int):
-    dataset = ClassificationDataset(images_path, defined_transforms)
+def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int, int]):
+    dataset = ClassificationDataset(images_path)
     train_size = int(CONSTANTS['train_split'] * len(dataset))
     remaining = len(dataset) - train_size
     val_size = remaining // 2
@@ -70,6 +68,14 @@ def get_data_loaders(defined_transforms, images_path: str,
     generator = torch.Generator().manual_seed(42)
     train_dataset, val_dataset, test_dataset = random_split(
         dataset, [train_size, val_size, test_size], generator=generator)
+
+    train_dataset.dataset.defined_transforms = generate_train_transforms(
+        dimensions)
+    val_dataset.dataset.defined_transforms = generate_eval_transforms(
+        dimensions)
+    test_dataset.dataset.defined_transforms = generate_eval_transforms(
+        dimensions)
+
     num_workers = min(4, os.cpu_count() // 2)
     sampler = None
 
@@ -97,10 +103,10 @@ def get_data_loaders(defined_transforms, images_path: str,
     return train_loader, val_loader, test_loader, pos_weight
 
 
-# TODO: CLAHE Is not used for the transform yet.
+# TODO: CLAHE is not yet implemented or integrated into the transforms.
 
 
-def generate_transforms(dimensions: list[int, int], fill_with_noise: bool = False):
+def generate_train_transforms(dimensions: list[int, int], fill_with_noise: bool = False):
     transform = transforms.Compose([
         ResizeAndPad(dimensions, fill_with_noise=fill_with_noise),
         transforms.RandomHorizontalFlip(p=0.5),
@@ -111,5 +117,12 @@ def generate_transforms(dimensions: list[int, int], fill_with_noise: bool = Fals
             brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
         transforms.ToTensor(),
     ])
+    return transform
 
+
+def generate_eval_transforms(dimensions: list[int, int], fill_with_noise: bool = False):
+    transform = transforms.Compose([
+        ResizeAndPad(dimensions, fill_with_noise=fill_with_noise),
+        transforms.ToTensor(),
+    ])
     return transform
