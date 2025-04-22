@@ -13,21 +13,21 @@ class LFD_CNN(nn.Module):
 
         # Conv layers
         self.conv1 = nn.Conv2d(
-            in_channels=1, out_channels=16, kernel_size=3, padding=1)
+            in_channels=3, out_channels=32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(
-            in_channels=16, out_channels=32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(
             in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(
+            in_channels=64, out_channels=128, kernel_size=3, padding=1)
 
         # Normalization and Pooling
-        self.batchnorm1 = nn.BatchNorm2d(16)
-        self.batchnorm2 = nn.BatchNorm2d(32)
-        self.batchnorm3 = nn.BatchNorm2d(64)
+        self.batchnorm1 = nn.BatchNorm2d(32)
+        self.batchnorm2 = nn.BatchNorm2d(64)
+        self.batchnorm3 = nn.BatchNorm2d(128)
         self.pool = nn.MaxPool2d(2, 2)  # Reduces spatial size
 
         # Fully Connected Layers (Classifier)
         # Assuming input image is 64x64 after pooling
-        self.fc1 = nn.Linear(64 * 16 * 16, 128)
+        self.fc1 = nn.Linear(128 * 28 * 28, 128)
         self.fc2 = nn.Linear(128, 1)  # Single neuron for binary classification
         self.dropout = nn.Dropout(0.3)  # Prevent overfitting
 

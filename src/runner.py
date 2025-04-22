@@ -19,7 +19,9 @@ log = setup_logger()
 class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
-                 batch_size: int, patience: int, defined_transforms, file_name: str):
+                 batch_size: int, patience: int, defined_transforms, file_name: str,
+                 min_loss: float):
+        self.min_loss = min_loss
         self.model = model
         self.model_name = model_name
         self.patience = patience
@@ -79,7 +81,9 @@ class Runner:
                 epochs_no_improve = 0
                 timestmp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                 model_file = f"{self.model_name}_{timestmp}_val_{val_loss:.4f}.pth"
-                self.save_model(model_file)
+                if val_loss < self.min_loss:
+                    # Save only if its lower than our bare minimum to prevent useless files
+                    self.save_model(model_file)
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= self.patience:
@@ -173,7 +177,7 @@ class Runner:
         model_filepath = os.path.join(model_weights_dir, filename)
 
         torch.save(self.model.state_dict(), model_filepath)
-        log.info(f"Model saved at: {model_filepath}")
+        log.info(f"Model saved in: {filename}")
 
     def get_model_filepath(self) -> str:
         model_weights_path = os.path.join(
@@ -245,6 +249,8 @@ if __name__ == "__main__":
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
     parser.add_argument("--patience", type=int,
                         help="Patience for early stopping (default = 3)", default=3)
+    parser.add_argument("--min_loss", type=float,
+                        help="Minimum loss needed to save the weights", default=0.5000)
 
     args = parser.parse_args()
 
@@ -277,13 +283,15 @@ if __name__ == "__main__":
     file_name = args.file if args.file else ""
     batch_size = args.batch
     patience = args.patience
+    min_loss = args.min_loss
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
         defined_transforms = generate_transforms(dimensions=dimensions)
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
-                        defined_transforms=defined_transforms, model_name=model_name, file_name=file_name)
+                        defined_transforms=defined_transforms, model_name=model_name, file_name=file_name,
+                        min_loss=min_loss)
 
         if mode == "train":
             runner.train()

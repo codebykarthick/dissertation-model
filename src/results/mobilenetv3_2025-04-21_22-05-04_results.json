@@ -1,9 +1,0 @@
-{
-    "model_name": "mobilenetv3",
-    "weight_used": "mobilenetv3_2025-04-21_21-56-50_val_0.6488.pth",
-    "test_loss": 0.6569932003815969,
-    "accuracy": 0.7857142857142857,
-    "precision": 0.2857142857142857,
-    "recall": 0.3333333333333333,
-    "f1_score": 0.3076923076923077
-}
