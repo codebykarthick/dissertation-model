@@ -40,5 +40,5 @@ class LFD_CNN(nn.Module):
         x = x.view(x.shape[0], -1)
         x = F.relu(self.fc1(x))
         x = self.dropout(x)  # Apply dropout
-        x = torch.sigmoid(self.fc2(x))  # Sigmoid for probability output
+        x = self.fc2(x)  # Final logits
         return x
