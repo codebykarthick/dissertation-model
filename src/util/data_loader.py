@@ -1,14 +1,22 @@
-import numpy as np
-from torchvision import transforms
-from torch.utils.data import DataLoader, Dataset, random_split, WeightedRandomSampler
-import torch
-from util.constants import CONSTANTS
-from PIL import Image
-import pandas as pd
 import os
+from typing import Sequence, cast
+
+import cv2
+import numpy as np
+import pandas as pd
+import torch
+from PIL import Image
+from torch.utils.data import (DataLoader, Dataset, WeightedRandomSampler,
+                              random_split)
+from torchvision import transforms
+
+from util.constants import CONSTANTS
 
 
 class ResizeAndPad:
+    """Resizes the image and fills any missing pixels with black or Gaussian noise
+    """
+
     def __init__(self, size, fill_with_noise=False):
         self.size = size
         self.fill_with_noise = fill_with_noise
@@ -31,6 +39,19 @@ class ResizeAndPad:
             return Image.fromarray(noise.astype(np.uint8))
         else:
             return Image.new("RGB", self.size, (0, 0, 0))  # black
+
+
+class ApplyCLAHE:
+    """Applies Contrast Equalisation onto Photos for better contrast.
+    """
+
+    def __call__(self, img):
+        img_np = np.array(img)
+        img_yuv = cv2.cvtColor(img_np, cv2.COLOR_RGB2YUV)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        img_clahe = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
+        return Image.fromarray(img_clahe)
 
 
 class ClassificationDataset(Dataset):
@@ -58,8 +79,11 @@ class ClassificationDataset(Dataset):
 
         return image, label
 
+    def set_transforms(self, defined_transforms):
+        self.defined_transforms = defined_transforms
 
-def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int, int]):
+
+def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int]):
     dataset = ClassificationDataset(images_path)
     train_size = int(CONSTANTS['train_split'] * len(dataset))
     remaining = len(dataset) - train_size
@@ -69,14 +93,17 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
     train_dataset, val_dataset, test_dataset = random_split(
         dataset, [train_size, val_size, test_size], generator=generator)
 
-    train_dataset.dataset.defined_transforms = generate_train_transforms(
+    cast(ClassificationDataset, train_dataset.dataset).defined_transforms = generate_train_transforms(
         dimensions)
-    val_dataset.dataset.defined_transforms = generate_eval_transforms(
+    cast(ClassificationDataset, val_dataset.dataset).defined_transforms = generate_eval_transforms(
         dimensions)
-    test_dataset.dataset.defined_transforms = generate_eval_transforms(
+    cast(ClassificationDataset, test_dataset.dataset).defined_transforms = generate_eval_transforms(
         dimensions)
 
-    num_workers = min(4, os.cpu_count() // 2)
+    num_cores = os.cpu_count()
+    if num_cores is not None:
+        workers = num_cores // 2
+    num_workers = min(4, workers)
     sampler = None
 
     # Extract labels for the train dataset for weight calculation
@@ -88,7 +115,7 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
     pos_weight = class_weights[1] / class_weights[0]
 
     if is_sampling_weighted:
-        sample_weights = [class_weights[label] for label in labels]
+        sample_weights = [class_weights[label].item() for label in labels]
         sampler = WeightedRandomSampler(
             weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
@@ -103,12 +130,19 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
     return train_loader, val_loader, test_loader, pos_weight
 
 
-# TODO: CLAHE is not yet implemented or integrated into the transforms.
+def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = False) -> transforms.Compose:
+    """Generate the necessary transforms for Data Augmentation for training
 
+    Args:
+        dimensions (list[int]): The dimensions to resize the image to.
+        fill_with_noise (bool, optional): To fill missing information with Black pixels or Gaussian noise. Defaults to False.
 
-def generate_train_transforms(dimensions: list[int, int], fill_with_noise: bool = False):
+    Returns:
+        transforms.Compose: The sequence of transforms to be applied for training data.
+    """
     transform = transforms.Compose([
         ResizeAndPad(dimensions, fill_with_noise=fill_with_noise),
+        ApplyCLAHE(),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomVerticalFlip(p=0.5),
         transforms.RandomRotation(degrees=15),
@@ -120,9 +154,19 @@ def generate_train_transforms(dimensions: list[int, int], fill_with_noise: bool 
     return transform
 
 
-def generate_eval_transforms(dimensions: list[int, int], fill_with_noise: bool = False):
+def generate_eval_transforms(dimensions: list[int], fill_with_noise: bool = False) -> transforms.Compose:
+    """Generate the necessary transforms for validation and testing. Only resizes and applies no Augmentation.
+
+    Args:
+        dimensions (list[int]): The dimensions to resize the image to.
+        fill_with_noise (bool, optional): To fill missing information with Black pixels or Gaussian noise. Defaults to False.
+
+    Returns:
+        transforms.Compose: The sequence of transforms to be applied for validation or testing data.
+    """
     transform = transforms.Compose([
         ResizeAndPad(dimensions, fill_with_noise=fill_with_noise),
+        ApplyCLAHE(),
         transforms.ToTensor(),
     ])
     return transform
