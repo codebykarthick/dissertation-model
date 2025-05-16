@@ -83,7 +83,7 @@ class ClassificationDataset(Dataset):
         self.defined_transforms = defined_transforms
 
 
-def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int]):
+def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int], fill_with_noise: bool = False):
     dataset = ClassificationDataset(images_path)
     train_size = int(CONSTANTS['train_split'] * len(dataset))
     remaining = len(dataset) - train_size
@@ -94,11 +94,11 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
         dataset, [train_size, val_size, test_size], generator=generator)
 
     cast(ClassificationDataset, train_dataset.dataset).defined_transforms = generate_train_transforms(
-        dimensions)
+        dimensions, fill_with_noise)
     cast(ClassificationDataset, val_dataset.dataset).defined_transforms = generate_eval_transforms(
-        dimensions)
+        dimensions, fill_with_noise)
     cast(ClassificationDataset, test_dataset.dataset).defined_transforms = generate_eval_transforms(
-        dimensions)
+        dimensions, fill_with_noise)
 
     num_cores = os.cpu_count()
     if num_cores is not None:

@@ -7,14 +7,16 @@ from datetime import datetime
 import torch
 from sklearn.metrics import (accuracy_score, f1_score, precision_score,
                              recall_score)
+from torchvision import transforms
 from tqdm import tqdm
+from ultralytics import YOLO
 
 from models.lfd_cnn import LFD_CNN
 from models.pretrained_models import (get_efficientnet_tuned,
                                       get_mobilenetv3_tuned)
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
-from util.data_loader import get_data_loaders
+from util.data_loader import ResizeAndPad, get_data_loaders
 from util.logger import setup_logger
 
 log = setup_logger()
@@ -24,7 +26,8 @@ class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int, dimensions: list[int], file_name: str,
-                 min_loss: float):
+                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool):
+        self.roi = roi
         self.min_loss = min_loss
         self.model = model
         self.model_name = model_name
@@ -35,7 +38,10 @@ class Runner:
 
         self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
             dimensions=dimensions, images_path=img_path,
-            is_sampling_weighted=is_oversampled, batch_size=batch_size)
+            is_sampling_weighted=is_oversampled, batch_size=batch_size, fill_with_noise=fill_noise)
+
+        if roi:
+            self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
 
         if is_loss_weighted:
             self.criterion = torch.nn.BCEWithLogitsLoss(
@@ -47,6 +53,25 @@ class Runner:
             self.model.parameters(), lr=lr)
         self.epochs = epochs
         self.file_name = file_name
+        self.fill_noise = fill_noise
+
+    def _apply_roi_and_crop(self, images):
+        pil_images = [transforms.ToPILImage()(img.cpu()) for img in images]
+        results = self.roi_model(pil_images, verbose=False)
+        cropped_images = []
+
+        for img_pil, img_tensor, result in zip(pil_images, images, results):
+            if result.boxes:
+                box = result.boxes.xyxy[0].cpu().numpy().astype(int)
+                x1, y1, x2, y2 = box
+                cropped = img_pil.crop((x1, y1, x2, y2))
+                resized = ResizeAndPad(
+                    (img_tensor.shape[2], img_tensor.shape[1]), fill_noise)(cropped)
+                cropped_images.append(transforms.ToTensor()(resized))
+            else:
+                cropped_images.append(img_tensor)
+
+        return torch.stack(cropped_images).to(self.device)
 
     def train(self):
         """
@@ -62,7 +87,10 @@ class Runner:
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
-                images = images.to(self.device)
+                if self.roi:
+                    images = self._apply_roi_and_crop(images)
+                else:
+                    images = images.to(self.device)
                 labels = labels.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -101,7 +129,10 @@ class Runner:
         total_loss = 0.0
         with torch.no_grad():
             for images, labels in self.val_loader:
-                images = images.to(self.device)
+                if self.roi:
+                    images = self._apply_roi_and_crop(images)
+                else:
+                    images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels.view(-1, 1).float())
@@ -124,7 +155,10 @@ class Runner:
         y_pred = []
         with torch.no_grad():
             for images, labels in self.test_loader:
-                images = images.to(self.device)
+                if self.roi:
+                    images = self._apply_roi_and_crop(images)
+                else:
+                    images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels.view(-1, 1).float())
@@ -239,6 +273,8 @@ if __name__ == "__main__":
                         help='learning rate for training')
     parser.add_argument('--batch', type=int, default=8,
                         help='Set the size of the batch for training and inference.')
+    parser.add_argument('--fill_noise', action='store_true',
+                        help="Fill missing area with Gaussian pixels or black", default=False)
     parser.add_argument('--epochs', type=int, default=30,
                         help='Number of epochs to train')
     parser.add_argument(
@@ -247,6 +283,10 @@ if __name__ == "__main__":
                         help='Enable weighted loss to handle class imbalance')
     parser.add_argument('--weighted_sampling', action='store_true',
                         help='Enable weighted sampling for training data')
+    parser.add_argument('--roi', action='store_true',
+                        help="Use trained YOLO to detect the region before using it for classification.")
+    parser.add_argument('--roi_weight', type=str,
+                        help='File name of YOLO weight to use during pipeline.')
     parser.add_argument("--env", type=str, choices=["local", "cloud"], default="local",
                         help="Cloud mode has a special shutdown sequence to save resources.")
     parser.add_argument("--copy_dir", type=str,
@@ -271,6 +311,10 @@ if __name__ == "__main__":
         if args.weighted_sampling == True:
             parser.error(
                 'Either one of weighted loss or weighted sampling can be set True at a time.')
+    if args.roi == True:
+        if not args.roi_weight:
+            parser.error(
+                '--roi_weight has to be provided to load the YOLO model if classfying with RoI.')
     if args.env == "cloud":
         if not args.copy_dir:
             parser.error("--copy_dir is required when env is cloud")
@@ -288,13 +332,16 @@ if __name__ == "__main__":
     batch_size = args.batch
     patience = args.patience
     min_loss = args.min_loss
+    roi = args.roi
+    roi_weight = args.roi_weight
+    fill_noise = args.fill_noise
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         dimensions=dimensions, model_name=model_name, file_name=file_name,
-                        min_loss=min_loss)
+                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):
