@@ -1,17 +1,21 @@
 import argparse
-from datetime import datetime
-from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import get_mobilenetv3, get_efficientnet
-import os
-import torch
-from tqdm import tqdm
-from util.constants import CONSTANTS
-from util.cloud_tools import auto_shutdown
-from util.data_loader import get_data_loaders, generate_transforms
-from util.logger import setup_logger
-import sys
 import json
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import os
+import sys
+from datetime import datetime
+
+import torch
+from sklearn.metrics import (accuracy_score, f1_score, precision_score,
+                             recall_score)
+from tqdm import tqdm
+
+from models.lfd_cnn import LFD_CNN
+from models.pretrained_models import (get_efficientnet_tuned,
+                                      get_mobilenetv3_tuned)
+from util.cloud_tools import auto_shutdown
+from util.constants import CONSTANTS
+from util.data_loader import get_data_loaders
+from util.logger import setup_logger
 
 log = setup_logger()
 
@@ -19,7 +23,7 @@ log = setup_logger()
 class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
-                 batch_size: int, patience: int, defined_transforms, file_name: str,
+                 batch_size: int, patience: int, dimensions: list[int], file_name: str,
                  min_loss: float):
         self.min_loss = min_loss
         self.model = model
@@ -30,7 +34,7 @@ class Runner:
         img_path = os.path.join(os.getcwd(), 'dataset')
 
         self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
-            defined_transforms=defined_transforms, images_path=img_path,
+            dimensions=dimensions, images_path=img_path,
             is_sampling_weighted=is_oversampled, batch_size=batch_size)
 
         if is_loss_weighted:
@@ -211,11 +215,11 @@ def create_model_from_name(name):
     if name == "cnn":
         model = LFD_CNN()
     elif name == "mobilenetv3":
-        model = get_mobilenetv3()
+        model = get_mobilenetv3_tuned()
     elif name == "efficientnet":
-        model = get_efficientnet()
+        model = get_efficientnet_tuned()
     else:
-        log.info(f"{model} is not a valid model.")
+        log.info(f"{name} is not a valid model.")
 
     dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
 
@@ -287,10 +291,9 @@ if __name__ == "__main__":
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
-        defined_transforms = generate_transforms(dimensions=dimensions)
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
-                        defined_transforms=defined_transforms, model_name=model_name, file_name=file_name,
+                        dimensions=dimensions, model_name=model_name, file_name=file_name,
                         min_loss=min_loss)
 
         if mode == "train":
