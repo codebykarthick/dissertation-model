@@ -1,48 +1,85 @@
+from typing import cast
+
 import torch.nn as nn
 import torchvision.models as models
+from torchvision import models
+from torchvision.models import (EfficientNet, EfficientNet_B7_Weights,
+                                MobileNetV3)
 from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights
 
 
-def get_mobilenetv3():
-    """
-    Get a mobilenet v3 model with all layers frozen except for final and
-    output layer for finetuning.
+def get_mobilenetv3_tuned(dropout_rate=0.2, hidden_units=128) -> MobileNetV3:
+    """Generate a fine-tunable crafted instance of MobileNetV3 for the task of prediction.
+
+    Args:
+        dropout_rate (float, optional): The amount of dropout to be used in the fine-tune layer. Defaults to 0.2.
+        hidden_units (int, optional): The number of hidden units in the dense layer. Defaults to 128.
+
+    Returns:
+        MobileNetV3: The modified instance of the MobileNetV3 architecture to be fine-tuned.
     """
     model = models.mobilenet_v3_large(
         weights=MobileNet_V3_Large_Weights.DEFAULT)
 
-    # Optionally, freeze the feature extraction layers to only fine-tune the classifier
+    # Freeze the feature extraction layers that are already pre-trained.
     for param in model.features.parameters():
         param.requires_grad = False
 
-    # Replace the classifier with a new linear layer for binary classification
-    in_features = model.classifier[0].in_features
+    # Get the number of input features for the classifier from the previously defined layer
+    in_features = cast(nn.Linear, model.classifier[0]).in_features
+
+    # Replace the classifier with a new, more complex sequential module
     model.classifier = nn.Sequential(
-        nn.Linear(in_features, 1)
+        nn.Linear(in_features, hidden_units),
+        nn.BatchNorm1d(hidden_units),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
+        nn.Linear(hidden_units, hidden_units // 2),  # Another hidden layer
+        nn.BatchNorm1d(hidden_units // 2),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
+        # Output layer for binary classification
+        nn.Linear(hidden_units // 2, 1)
     )
 
     return model
 
 
-def get_efficientnet():
-    """
-    Get an EfficientNet-B7 model with all layers frozen except 
-    for the final classifier layer for finetuning.
-    This is used as a substitute for EfficientNet-Lite, 
-    which is not available in torchvision.models.
-    """
-    # Load a pretrained EfficientNet-B7 model
-    model = models.efficientnet_b7(pretrained=True)
+def get_efficientnet_tuned(dropout_rate=0.3, hidden_units=256) -> EfficientNet:
+    """Generate a custom fine-tunable instance of EfficientNet architecture for the task.
 
-    # Freeze the feature extraction layers to only fine-tune the classifier
+    Args:
+        dropout_rate (float, optional): The amount of dropout to be used in the fine-tune layer. Defaults to 0.3.
+        hidden_units (int, optional): The number of hidden units in the dense layer. Defaults to 256.
+
+    Returns:
+        EfficientNet: The modified instance of the EfficientNet architecture to be fine-tuned.
+    """
+
+    # Load a pretrained EfficientNet-B7 model
+    model = models.efficientnet_b7(weights=EfficientNet_B7_Weights.DEFAULT)
+
+    # Freeze the feature extraction layers
     for param in model.features.parameters():
         param.requires_grad = False
 
-    # Replace the classifier with a new linear layer for binary classification
-    in_features = model.classifier[1].in_features
+    # Get the number of input features for the classifier
+    # The first layer is a dropout, second is the actual linear layer from which we can extract the dimensions.
+    in_features = cast(nn.Linear, model.classifier[1]).in_features
+
+    # Replace the classifier with a new, more complex sequential module
     model.classifier = nn.Sequential(
-        nn.Dropout(p=0.2, inplace=True),
-        nn.Linear(in_features, 1)
+        nn.Dropout(p=dropout_rate, inplace=True),
+        nn.Linear(in_features, hidden_units),
+        nn.BatchNorm1d(hidden_units),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=dropout_rate, inplace=True),
+        nn.Linear(hidden_units, hidden_units // 2),  # Another hidden layer
+        nn.BatchNorm1d(hidden_units // 2),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=dropout_rate, inplace=True),
+        # Output layer for binary classification
+        nn.Linear(hidden_units // 2, 1)
     )
 
     return model
