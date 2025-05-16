@@ -1,6 +1,6 @@
-from datetime import datetime
 import logging
 import os
+from datetime import datetime
 
 LOG_PATH = "logs"
 log_file = os.path.join(
@@ -9,8 +9,12 @@ os.makedirs(LOG_PATH, exist_ok=True)
 logger = None
 
 
-def setup_logger():
-    """ Setup a logger for the model training. """
+def setup_logger() -> logging.Logger:
+    """Creates an instance of logger to be used across the project for uniformity. Writes to stdout and files
+
+    Returns:
+        logging.Logger: Logger to be used for logging information.
+    """
     # Logger
     global logger
     if logger is None:
