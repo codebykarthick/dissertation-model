@@ -297,6 +297,10 @@ if __name__ == "__main__":
                         min_loss=min_loss)
 
         if mode == "train":
+            if not os.path.exists("dataset/Images"):
+                log.error(
+                    "Dataset does not exist for training, please download using data_setup.py before training.")
+                sys.exit(1)
             runner.train()
         elif mode == "evaluate":
             runner.test()
