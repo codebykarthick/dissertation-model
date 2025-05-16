@@ -1,20 +1,28 @@
-import gdown
 import os
 import shutil
+import sys
 from zipfile import ZipFile
 
-DATASET_URL = "https://drive.google.com/file/d/1YKLtYfpc66mBaEUh84QYmGKvDYYbzXxK/view?usp=share_link"
+import gdown
 
-if __name__ == "__main__":
+from util.logger import logger
+
+
+def _download(data_dir: str, download_url: str):
+    """Downloads the item from the url into the data directory.
+
+    Args:
+        data_dir (str): The directory to download into.
+        download_url (str): The url to download from, assumes the artifact is a zip file.
+    """
     # Create 'dataset' folder or clear it if it already exists
-    data_dir = os.path.join(os.getcwd(), "dataset")
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
 
     # Download the dataset zip file
     zip_path = os.path.join(os.getcwd(), "dataset.zip")
     gdown.download(
-        "https://drive.google.com/uc?id=1YKLtYfpc66mBaEUh84QYmGKvDYYbzXxK", zip_path, quiet=False)
+        download_url, zip_path, quiet=False)
 
     # Extract the zip file
     with ZipFile(zip_path, 'r') as zip_ref:
@@ -22,3 +30,36 @@ if __name__ == "__main__":
 
     # Delete the zip file
     os.remove(zip_path)
+
+
+def download_classification_dataset():
+    """Download the dataset for the full classification with images and labels for classification.
+    """
+
+    data_dir = os.path.join(os.getcwd(), "dataset")
+    _download(data_dir=data_dir,
+              download_url="https://drive.google.com/uc?id=1YKLtYfpc66mBaEUh84QYmGKvDYYbzXxK")
+
+
+def download_yolo_dataset():
+    """Download the dataset for yolo finetuning with images and bounding boxes for detection.
+    """
+    data_dir = os.path.join(os.getcwd(), "dataset", "yolo")
+    _download(data_dir=data_dir, download_url="")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        logger.error("No download specified! Required: classification / yolo")
+
+    dataset_type = sys.argv[1].lower()
+
+    if dataset_type == "classification":
+        logger.info("Downloading classification dataset.")
+        download_classification_dataset()
+    elif dataset_type == "yolo":
+        logger.info("Downloading yolo dataset.")
+        download_yolo_dataset()
+    else:
+        logger.error(
+            "Incorrect download specified! Allowed: classification / yolo.")
