@@ -39,15 +39,16 @@ def download_yolo_baseweight():
 
 
 class RoiRunner:
-    def __init__(self, epochs: int, model: YOLO, file_name: str, batch_size: int) -> None:
+    def __init__(self, epochs: int, model: YOLO, file_name: str, batch_size: int, lr: float) -> None:
         self.epochs = epochs
         self.model = model
         self.file_name = file_name
         self.batch_size = batch_size
+        self.lr = lr
 
     def train(self):
         self.model.train(cfg="dataset/yolo/config.yaml",
-                         epochs=self.epochs, batch_size=self.batch_size)
+                         epochs=self.epochs, batch_size=self.batch_size, lr=self.lr)
 
     def evaluate(self):
         self.load_model(self.file_name)
@@ -69,7 +70,9 @@ if __name__ == "__main__":
                         required=True, help="Mode of operation: Train or evaluate performance.")
     parser.add_argument('--batch', type=int, default=8,
                         help="Set the size of the batch for training.")
-    parser.add_argument('--epochs', type=int, default=30,
+    parser.add_argument('--lr', type=float, default=1e-5,
+                        help="Set the learning rate for the YOLO fine tuning.")
+    parser.add_argument('--epochs', type=int, default=50,
                         help='Number of epochs to train')
     parser.add_argument(
         '--file', type=str, help='File name of model weights to use when evaluating')
@@ -84,6 +87,7 @@ if __name__ == "__main__":
     epochs = args.epochs
     file_name = args.file if args.file else ""
     batch_size = args.batch
+    lr = args.lr
 
     # Validation of arguments
     if args.mode == 'evaluate':
@@ -104,7 +108,7 @@ if __name__ == "__main__":
     model = YOLO("weights/yolo/yolov11s.pt", task="detect")
 
     runner = RoiRunner(epochs=epochs, model=model, file_name=file_name,
-                       batch_size=batch_size)
+                       batch_size=batch_size, lr=lr)
 
     if mode == "train":
         # Check if the dataset for RoI training exists before proceeding
