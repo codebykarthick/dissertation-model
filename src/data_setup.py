@@ -5,7 +5,9 @@ from zipfile import ZipFile
 
 import gdown
 
-from util.logger import logger
+from util.logger import setup_logger
+
+logger = setup_logger()
 
 
 def _download(data_dir: str, download_url: str):
@@ -26,7 +28,7 @@ def _download(data_dir: str, download_url: str):
 
     # Extract the zip file
     with ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(os.getcwd())
+        zip_ref.extractall(data_dir)
 
     # Delete the zip file
     os.remove(zip_path)
@@ -38,7 +40,7 @@ def download_classification_dataset():
 
     data_dir = os.path.join(os.getcwd(), "dataset")
     _download(data_dir=data_dir,
-              download_url="https://drive.google.com/uc?id=1YKLtYfpc66mBaEUh84QYmGKvDYYbzXxK")
+              download_url="https://drive.google.com/uc?id=13iUpYrgBDVEXBYv2EdXyi3wU_NYuoTRZ")
 
 
 def download_yolo_dataset():
