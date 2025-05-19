@@ -240,10 +240,15 @@ class Runner:
         log.info(f"Model loaded successfully!")
 
 
-def create_model_from_name(name):
-    """
-    Create the model instance from the name provided in the arguments. Also
-    returns the dimensions required for resizing.
+def create_model_from_name(name: str) -> tuple[torch.nn.Module, list[int]]:
+    """Create the model instance from the name of the model specified. Halts execution
+    if model name is wrong.
+
+    Args:
+        name (str): Name of the model to be used.
+
+    Returns:
+        tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
     """
 
     if name == "cnn":
@@ -253,7 +258,8 @@ def create_model_from_name(name):
     elif name == "efficientnet":
         model = get_efficientnet_tuned()
     else:
-        log.info(f"{name} is not a valid model.")
+        log.error(f"{name} is not a valid model.")
+        sys.exit(1)
 
     dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
 
