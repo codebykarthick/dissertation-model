@@ -100,10 +100,11 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
     cast(ClassificationDataset, test_dataset.dataset).defined_transforms = generate_eval_transforms(
         dimensions, fill_with_noise)
 
+    workers = 4
     num_cores = os.cpu_count()
     if num_cores is not None:
-        workers = num_cores // 2
-    num_workers = min(4, workers)
+        workers = min(workers, num_cores // 2)
+    num_workers = workers
     sampler = None
 
     # Extract labels for the train dataset for weight calculation
