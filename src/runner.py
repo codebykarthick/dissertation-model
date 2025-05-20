@@ -86,11 +86,11 @@ class Runner:
         log.info(
             f"Training {self.model_name} model, for {self.epochs} epochs.")
         self.model.to(self.device)
-        self.model.train()
 
         best_val_loss = float('inf')
         epochs_no_improve = 0
         for epoch in range(self.epochs):
+            self.model.train()
             epoch_loss = 0.0
             for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
                 if self.roi:
@@ -197,6 +197,8 @@ class Runner:
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)
 
+        log.info(f"True Labels: {y_true}")
+        log.info(f"Pred Labels: {y_pred}")
         log.info(f"Test Loss: {avg_test_loss:.4f}")
         log.info(f"Test results saved at: {results_path}")
         return avg_test_loss
