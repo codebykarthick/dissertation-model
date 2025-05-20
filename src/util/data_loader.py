@@ -57,7 +57,7 @@ class ApplyCLAHE:
 class ClassificationDataset(Dataset):
     def __init__(self, image_dir: str, defined_transforms=None):
         super().__init__()
-        self.image_dir = os.path.join(image_dir, 'images')
+        self.image_dir = os.path.join(image_dir, 'Images')
         self.label_file = os.path.join(image_dir, 'labels.csv')
         self.images = sorted(os.listdir(self.image_dir))
         self.defined_transforms = defined_transforms

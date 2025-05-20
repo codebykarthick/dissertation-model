@@ -1,1 +1,1 @@
-python runner.py --models mobilenetv3, cnn, efficientnet --mode train --lr 1e-5 --batch 32 --workers 8
+python runner.py --models mobilenetv3 cnn efficientnet --mode train --lr 1e-5 --batch 32 --workers 8
