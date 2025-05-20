@@ -26,7 +26,7 @@ class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int, dimensions: list[int], file_name: str,
-                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool):
+                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool, num_workers: int):
         self.roi = roi
         self.min_loss = min_loss
         self.model = model
@@ -38,7 +38,8 @@ class Runner:
 
         self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
             dimensions=dimensions, images_path=img_path,
-            is_sampling_weighted=is_oversampled, batch_size=batch_size, fill_with_noise=fill_noise)
+            is_sampling_weighted=is_oversampled, batch_size=batch_size, fill_with_noise=fill_noise,
+            num_workers=num_workers)
 
         if roi:
             self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
@@ -283,6 +284,8 @@ if __name__ == "__main__":
                         help="Fill missing area with Gaussian pixels or black", default=False)
     parser.add_argument('--epochs', type=int, default=30,
                         help='Number of epochs to train')
+    parser.add_argument('--workers', type=int, default=5,
+                        help='Number of workers for Pytorch dataloader.')
     parser.add_argument(
         '--file', type=str, help='File name of model weights to use when evaluating')
     parser.add_argument('--weighted_loss', action='store_true',
@@ -341,13 +344,14 @@ if __name__ == "__main__":
     roi = args.roi
     roi_weight = args.roi_weight
     fill_noise = args.fill_noise
+    num_workers = args.workers
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         dimensions=dimensions, model_name=model_name, file_name=file_name,
-                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise)
+                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):
