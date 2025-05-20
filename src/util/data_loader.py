@@ -103,7 +103,7 @@ def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: i
     workers = 4
     num_cores = os.cpu_count()
     if num_cores is not None:
-        workers = min(workers, num_cores // 2)
+        workers = max(workers, num_cores // 2)
     num_workers = workers
     sampler = None
 
