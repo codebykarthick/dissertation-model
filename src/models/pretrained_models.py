@@ -69,15 +69,15 @@ def get_efficientnet_tuned(dropout_rate=0.3, hidden_units=256) -> EfficientNet:
 
     # Replace the classifier with a new, more complex sequential module
     model.classifier = nn.Sequential(
-        nn.Dropout(p=dropout_rate, inplace=True),
+        nn.Dropout(p=dropout_rate),
         nn.Linear(in_features, hidden_units),
         nn.BatchNorm1d(hidden_units),  # Optional: Batch normalization
-        nn.ReLU(inplace=True),
-        nn.Dropout(p=dropout_rate, inplace=True),
+        nn.ReLU(),
+        nn.Dropout(p=dropout_rate),
         nn.Linear(hidden_units, hidden_units // 2),  # Another hidden layer
         nn.BatchNorm1d(hidden_units // 2),  # Optional: Batch normalization
-        nn.ReLU(inplace=True),
-        nn.Dropout(p=dropout_rate, inplace=True),
+        nn.ReLU(),
+        nn.Dropout(p=dropout_rate),
         # Output layer for binary classification
         nn.Linear(hidden_units // 2, 1)
     )
