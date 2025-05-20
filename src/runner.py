@@ -50,8 +50,13 @@ class Runner:
         else:
             self.criterion = torch.nn.BCEWithLogitsLoss()
 
-        self.optimizer = torch.optim.Adam(
+        # Using Adam optimiser
+        self.optimiser = torch.optim.Adam(
             self.model.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimiser, mode='min', factor=0.5, patience=3, min_lr=10-6
+        )
+
         self.epochs = epochs
         self.file_name = file_name
         self.fill_noise = fill_noise
@@ -94,18 +99,19 @@ class Runner:
                     images = images.to(self.device)
                 labels = labels.to(self.device)
 
-                self.optimizer.zero_grad()
+                self.optimiser.zero_grad()
                 outputs = self.model(images)
                 # Ensure labels are float for BCELoss
                 loss = self.criterion(outputs, labels.view(-1, 1).float())
                 loss.backward()
-                self.optimizer.step()
+                self.optimiser.step()
                 epoch_loss += loss.item()
 
             avg_loss = epoch_loss / len(self.train_loader)
 
             # Validate after each epoch
             val_loss = self.validate()
+            self.scheduler.step(val_loss)
             log.info(
                 f"Epoch: {epoch+1}/{self.epochs}, Training Loss: {avg_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
