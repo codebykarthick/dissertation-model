@@ -3,20 +3,27 @@ import json
 import os
 import sys
 from datetime import datetime
+from typing import cast
 
 import torch
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score)
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.model_selection import KFold
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 from ultralytics import YOLO
 
 from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import (get_efficientnet_tuned,
-                                      get_mobilenetv3_tuned)
+from models.pretrained_models import get_efficientnet_tuned, get_mobilenetv3_tuned
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
-from util.data_loader import ResizeAndPad, get_data_loaders
+from util.data_loader import (
+    ClassificationDataset,
+    ResizeAndPad,
+    generate_eval_transforms,
+    generate_train_transforms,
+    get_data_loaders,
+)
 from util.logger import setup_logger
 
 log = setup_logger()
@@ -26,20 +33,29 @@ class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int, dimensions: list[int], file_name: str,
-                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool, num_workers: int):
+                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool, num_workers: int,
+                 k: int = 10):
         self.roi = roi
         self.min_loss = min_loss
         self.model = model
         self.model_name = model_name
         self.patience = patience
+        self.k = k
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else "cpu"
+        self.dimensions = dimensions
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.lr = lr
+
         img_path = os.path.join(os.getcwd(), 'dataset')
 
         self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
             dimensions=dimensions, images_path=img_path,
             is_sampling_weighted=is_oversampled, batch_size=batch_size, fill_with_noise=fill_noise,
             num_workers=num_workers)
+
+        self.dataset = ClassificationDataset(img_path)
 
         if roi:
             self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
@@ -79,8 +95,108 @@ class Runner:
 
         return torch.stack(cropped_images).to(self.device)
 
+    def train_with_cross_validation(self):
+        """Training using k-fold cross validation to ensure equal training in all folds."""
+        log.info(f"Starting {self.k}-Fold Cross Validation training")
+        kf = KFold(n_splits=self.k, shuffle=True, random_state=42)
+        dataset = self.dataset
+
+        for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
+            log.info(f"Fold {fold + 1}/{self.k} --------------------------")
+
+            # Subset datasets
+            train_subset = torch.utils.data.Subset(dataset, train_idx)
+            val_subset = torch.utils.data.Subset(dataset, val_idx)
+
+            # Apply appropriate transforms
+            cast(ClassificationDataset, train_subset.dataset).defined_transforms = generate_train_transforms(
+                self.dimensions, fill_with_noise=self.fill_noise
+            )
+            cast(ClassificationDataset, val_subset.dataset).defined_transforms = generate_eval_transforms(
+                self.dimensions, fill_with_noise=self.fill_noise
+            )
+
+            # Dataloaders
+            train_loader = DataLoader(
+                train_subset, batch_size=self.batch_size, shuffle=True,
+                num_workers=self.num_workers, pin_memory=True
+            )
+            val_loader = DataLoader(
+                val_subset, batch_size=self.batch_size, shuffle=False,
+                num_workers=self.num_workers, pin_memory=True
+            )
+
+            # New model instance per fold
+            model, _ = create_model_from_name(self.model_name)
+            model = model.to(self.device)
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode='min', factor=0.5, patience=3)
+            criterion = self.criterion
+
+            best_val_loss = float('inf')
+            no_improve = 0
+
+            for epoch in range(self.epochs):
+                model.train()
+                total_loss = 0.0
+                for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
+                    if self.roi:
+                        images = self._apply_roi_and_crop(images)
+                    else:
+                        images = images.to(self.device)
+                    labels = labels.to(self.device)
+
+                    optimizer.zero_grad()
+                    outputs = model(images)
+                    loss = criterion(outputs, labels.view(-1, 1).float())
+                    loss.backward()
+                    optimizer.step()
+                    total_loss += loss.item()
+
+                avg_train_loss = total_loss / len(train_loader)
+
+                # Validation
+                model.eval()
+                total_val_loss = 0.0
+                with torch.no_grad():
+                    for images, labels in val_loader:
+                        if self.roi:
+                            images = self._apply_roi_and_crop(images)
+                        else:
+                            images = images.to(self.device)
+                        labels = labels.to(self.device)
+                        outputs = model(images)
+                        val_loss = criterion(
+                            outputs, labels.view(-1, 1).float())
+                        total_val_loss += val_loss.item()
+
+                avg_val_loss = total_val_loss / len(val_loader)
+                scheduler.step(avg_val_loss)
+
+                log.info(
+                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+
+                if avg_val_loss < best_val_loss:
+                    best_val_loss = avg_val_loss
+                    no_improve = 0
+                    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                    model_file = f"{self.model_name}_fold{fold+1}_{timestamp}_val_{avg_val_loss:.4f}.pth"
+                    if avg_val_loss < self.min_loss:
+                        self.model = model  # Update reference before saving
+                        self.save_model(model_file)
+                else:
+                    no_improve += 1
+                    if no_improve >= self.patience:
+                        log.info(
+                            f"Early stopping at epoch {epoch+1} for fold {fold + 1}")
+                        break
+
     def train(self):
         """
+        *DEPRECATED*: This method is deprecated in favour of train_with_cross_validation due to the 
+        small dataset size.
+
         Run the training loop for the loaded model for the specified epochs
         """
         log.info(
@@ -284,6 +400,8 @@ if __name__ == "__main__":
                         help='List of models to train, save, or evaluate')
     parser.add_argument('--mode', choices=['train', 'evaluate', 'export'],
                         required=True, help='Mode of operation: train, evaluate for performance benchmark or export for mobile app.')
+    parser.add_argument('--k_fold', '-k', default=10,
+                        help="Number of folds to be set for the cross validation.")
     parser.add_argument('--lr', type=float, default=1e-4,
                         help='learning rate for training')
     parser.add_argument('--batch', type=int, default=8,
@@ -353,20 +471,21 @@ if __name__ == "__main__":
     roi_weight = args.roi_weight
     fill_noise = args.fill_noise
     num_workers = args.workers
+    k = args.k
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         dimensions=dimensions, model_name=model_name, file_name=file_name,
-                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers)
+                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers, k=k)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):
                 log.error(
                     "Dataset does not exist for training, please download using data_setup.py before training.")
                 sys.exit(1)
-            runner.train()
+            runner.train_with_cross_validation()
         elif mode == "evaluate":
             runner.test()
         elif mode == "export":

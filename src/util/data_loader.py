@@ -1,13 +1,13 @@
 import os
-from typing import Sequence, cast
+from typing import cast
 
 import cv2
 import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
-from torch.utils.data import (DataLoader, Dataset, WeightedRandomSampler,
-                              random_split)
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler, random_split
 from torchvision import transforms
 
 from util.constants import CONSTANTS
@@ -83,7 +83,23 @@ class ClassificationDataset(Dataset):
         self.defined_transforms = defined_transforms
 
 
-def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int, dimensions: list[int], num_workers: int, fill_with_noise: bool = False):
+def get_data_loaders(images_path: str, is_sampling_weighted: bool, batch_size: int,
+                     dimensions: list[int], num_workers: int,
+                     fill_with_noise: bool = False) -> tuple[DataLoader, DataLoader, DataLoader, Tensor]:
+    """*DEPRECATED* Method to get train, validation and testing data loaders. Deprecated in favour of cross validation
+    due to small dataset size.
+
+    Args:
+        images_path (str): Path to the processed images downloaded to create the dataset.
+        is_sampling_weighted (bool): Use weighted sampling to perform oversampling of imbalanced classes.
+        batch_size (int): Size of a single batch for training and validation.
+        dimensions (list[int]): Dimensions fo the image to resize for the network.
+        num_workers (int): Number of workers to load data for efficient training.
+        fill_with_noise (bool, optional): Fill with gaussian noise instead of black. Defaults to False.
+
+    Returns:
+        tuple[DataLoader, DataLoader, DataLoader, Tensor]: Returns the train, val, test dataloaders and weight for sampling
+    """
     dataset = ClassificationDataset(images_path)
     train_size = int(CONSTANTS['train_split'] * len(dataset))
     remaining = len(dataset) - train_size

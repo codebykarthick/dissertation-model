@@ -1,3 +1,7 @@
+# Download the dataset
+python data_setup.py classification
+python data_setup.py yolo
+
 # Training scripts - Without RoI, No Oversampling and No loss weighting
 python runner.py --models mobilenetv3 efficientnet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --min_loss 0.4000
 python runner.py --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --min_loss 0.4000
