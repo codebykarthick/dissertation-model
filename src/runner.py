@@ -202,7 +202,7 @@ class Runner:
                 }
 
                 # Need to focus on all round performance for checkpointing.
-                if current_f1 >= best_f1:
+                if current_f1 >= best_f1 and current_f1 > 0:
                     best_f1 = current_f1
                     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                     model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
