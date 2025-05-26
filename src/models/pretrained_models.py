@@ -3,8 +3,13 @@ from typing import cast
 import torch.nn as nn
 import torchvision.models as models
 from torchvision import models
-from torchvision.models import (EfficientNet, EfficientNet_B7_Weights,
-                                MobileNetV3)
+from torchvision.models import (
+    EfficientNet,
+    EfficientNet_B7_Weights,
+    MobileNetV3,
+    ShuffleNet_V2_X1_0_Weights,
+    ShuffleNetV2,
+)
 from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights
 
 
@@ -78,6 +83,32 @@ def get_efficientnet_tuned(dropout_rate=0.3, hidden_units=256) -> EfficientNet:
         nn.BatchNorm1d(hidden_units // 2),  # Optional: Batch normalization
         nn.ReLU(),
         nn.Dropout(p=dropout_rate),
+        # Output layer for binary classification
+        nn.Linear(hidden_units // 2, 1)
+    )
+
+    return model
+
+
+def get_shufflenet_tuned(dropout_rate=0.3, hidden_units=256) -> ShuffleNetV2:
+    model = models.shufflenet_v2_x1_0(
+        weights=ShuffleNet_V2_X1_0_Weights.DEFAULT)
+
+    # Freeze the feature extraction layers
+    for param in model.parameters():
+        param.requires_grad = False
+
+    in_features = cast(nn.Linear, model.fc).in_features
+
+    model.fc = nn.Sequential(
+        nn.Linear(in_features, hidden_units),
+        nn.BatchNorm1d(hidden_units),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
+        nn.Linear(hidden_units, hidden_units // 2),  # Another hidden layer
+        nn.BatchNorm1d(hidden_units // 2),  # Optional: Batch normalization
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
         # Output layer for binary classification
         nn.Linear(hidden_units // 2, 1)
     )

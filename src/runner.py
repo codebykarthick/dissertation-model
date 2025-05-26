@@ -14,7 +14,11 @@ from tqdm import tqdm
 from ultralytics import YOLO
 
 from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import get_efficientnet_tuned, get_mobilenetv3_tuned
+from models.pretrained_models import (
+    get_efficientnet_tuned,
+    get_mobilenetv3_tuned,
+    get_shufflenet_tuned,
+)
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
 from util.data_loader import (
@@ -285,6 +289,8 @@ def create_model_from_name(name: str) -> tuple[torch.nn.Module, list[int]]:
         model = get_mobilenetv3_tuned()
     elif name == "efficientnet":
         model = get_efficientnet_tuned()
+    elif name == "shufflenet":
+        model = get_shufflenet_tuned()
     else:
         log.error(f"{name} is not a valid model.")
         sys.exit(1)
@@ -295,7 +301,7 @@ def create_model_from_name(name: str) -> tuple[torch.nn.Module, list[int]]:
 
 
 if __name__ == "__main__":
-    valid_models = ["mobilenetv3", "cnn", "efficientnet"]
+    valid_models = ["mobilenetv3", "cnn", "efficientnet", "shufflenet"]
 
     parser = argparse.ArgumentParser(
         description="Run models for training or evaluation")
