@@ -6,8 +6,7 @@ from datetime import datetime
 from typing import cast
 
 import torch
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score)
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -15,13 +14,16 @@ from tqdm import tqdm
 from ultralytics import YOLO
 
 from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import (get_efficientnet_tuned,
-                                      get_mobilenetv3_tuned)
+from models.pretrained_models import get_efficientnet_tuned, get_mobilenetv3_tuned
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
-from util.data_loader import (ClassificationDataset, ResizeAndPad,
-                              generate_eval_transforms,
-                              generate_train_transforms, get_data_loaders)
+from util.data_loader import (
+    ClassificationDataset,
+    ResizeAndPad,
+    generate_eval_transforms,
+    generate_train_transforms,
+    get_data_loaders,
+)
 from util.logger import setup_logger
 
 log = setup_logger()
@@ -31,10 +33,9 @@ class Runner:
     def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int, dimensions: list[int], file_name: str,
-                 min_loss: float, roi: bool, roi_weight: str, fill_noise: bool, num_workers: int,
+                 roi: bool, roi_weight: str, fill_noise: bool, num_workers: int,
                  k: int = 10):
         self.roi = roi
-        self.min_loss = min_loss
         self.model = model
         self.model_name = model_name
         self.patience = patience
@@ -132,8 +133,11 @@ class Runner:
                 optimizer, mode='min', factor=0.5, patience=3)
             criterion = self.criterion
 
-            best_val_loss = float('inf')
+            # Use best_recall for model selection
+            best_recall = 0.0
             no_improve = 0
+            timestamp = None
+            model_file = None
 
             for epoch in range(self.epochs):
                 model.train()
@@ -156,6 +160,8 @@ class Runner:
 
                 # Validation
                 model.eval()
+                val_preds = []
+                val_labels = []
                 total_val_loss = 0.0
                 with torch.no_grad():
                     for images, labels in val_loader:
@@ -168,6 +174,9 @@ class Runner:
                         val_loss = criterion(
                             outputs, labels.view(-1, 1).float())
                         total_val_loss += val_loss.item()
+                        preds = torch.sigmoid(outputs).cpu().numpy()
+                        val_preds.extend(preds)
+                        val_labels.extend(labels.cpu().numpy())
 
                 avg_val_loss = total_val_loss / len(val_loader)
                 scheduler.step(avg_val_loss)
@@ -175,147 +184,43 @@ class Runner:
                 log.info(
                     f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
 
-                if avg_val_loss < best_val_loss:
-                    best_val_loss = avg_val_loss
-                    no_improve = 0
+                # Compute recall and use it for model checkpointing
+                val_preds_bin = [1 if p > 0.5 else 0 for p in val_preds]
+                val_labels_int = [int(l) for l in val_labels]
+                current_recall = recall_score(val_labels_int, val_preds_bin)
+
+                if current_recall > best_recall:
+                    best_recall = current_recall
                     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                    model_file = f"{self.model_name}_fold{fold+1}_{timestamp}_val_{avg_val_loss:.4f}.pth"
-                    if avg_val_loss < self.min_loss:
-                        self.model = model  # Update reference before saving
-                        self.save_model(model_file)
+                    model_file = f"{self.model_name}_fold{fold+1}_{timestamp}_recall_{best_recall:.4f}.pth"
+
+                    self.model = model
+                    self.save_model(model_file)
+
+                    metrics = {
+                        "accuracy": accuracy_score(val_labels_int, val_preds_bin),
+                        "precision": precision_score(val_labels_int, val_preds_bin),
+                        "recall": best_recall,
+                        "f1_score": f1_score(val_labels_int, val_preds_bin),
+                        "val_loss": avg_val_loss
+                    }
+
+                    results_dir = os.path.join(os.getcwd(), "results")
+                    os.makedirs(results_dir, exist_ok=True)
+                    result_file = os.path.join(
+                        results_dir, f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json")
+                    with open(result_file, "w") as f:
+                        json.dump(metrics, f, indent=4)
+                    log.info(
+                        f"Saved metrics for Fold {fold + 1} in: {result_file}")
+
+                    no_improve = 0
                 else:
                     no_improve += 1
                     if no_improve >= self.patience:
                         log.info(
                             f"Early stopping at epoch {epoch+1} for fold {fold + 1}")
                         break
-
-    def train(self):
-        """
-        *DEPRECATED*: This method is deprecated in favour of train_with_cross_validation due to the 
-        small dataset size.
-
-        Run the training loop for the loaded model for the specified epochs
-        """
-        log.info(
-            f"Training {self.model_name} model, for {self.epochs} epochs.")
-        self.model.to(self.device)
-
-        best_val_loss = float('inf')
-        epochs_no_improve = 0
-        for epoch in range(self.epochs):
-            self.model.train()
-            epoch_loss = 0.0
-            for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
-                labels = labels.to(self.device)
-
-                self.optimiser.zero_grad()
-                outputs = self.model(images)
-                # Ensure labels are float for BCELoss
-                loss = self.criterion(outputs, labels.view(-1, 1).float())
-                loss.backward()
-                self.optimiser.step()
-                epoch_loss += loss.item()
-
-            avg_loss = epoch_loss / len(self.train_loader)
-
-            # Validate after each epoch
-            val_loss = self.validate()
-            self.scheduler.step(val_loss)
-            log.info(
-                f"Epoch: {epoch+1}/{self.epochs}, Training Loss: {avg_loss:.4f}, Validation Loss: {val_loss:.4f}")
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                epochs_no_improve = 0
-                timestmp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                model_file = f"{self.model_name}_{timestmp}_val_{val_loss:.4f}.pth"
-                if val_loss < self.min_loss:
-                    # Save only if its lower than our bare minimum to prevent useless files
-                    self.save_model(model_file)
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= self.patience:
-                    log.info(
-                        f"Early stopping triggered after {epoch+1} epochs with no improvement.")
-                    break
-
-    def validate(self):
-        """Evaluate the model on the validation set and return the average loss"""
-        self.model.eval()
-        total_loss = 0.0
-        with torch.no_grad():
-            for images, labels in self.val_loader:
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
-                labels = labels.to(self.device)
-                outputs = self.model(images)
-                loss = self.criterion(outputs, labels.view(-1, 1).float())
-                total_loss += loss.item()
-        avg_val_loss = total_loss / len(self.val_loader)
-        self.model.train()  # Return to train mode
-        return avg_val_loss
-
-    def test(self):
-        """
-        Load the model weights and evaluate the model on the test set 
-        and return the average test loss.
-        """
-        log.info(f"Evaluating {self.model_name} model on the test set.")
-        self.load_model()
-
-        self.model.eval()
-        total_loss = 0.0
-        y_true = []
-        y_pred = []
-        with torch.no_grad():
-            for images, labels in self.test_loader:
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
-                labels = labels.to(self.device)
-                outputs = self.model(images)
-                loss = self.criterion(outputs, labels.view(-1, 1).float())
-                total_loss += loss.item()
-                preds = torch.sigmoid(outputs).view(-1) > 0.5
-                y_true.extend(labels.cpu().numpy())
-                y_pred.extend(preds.cpu().numpy())
-        avg_test_loss = total_loss / len(self.test_loader)
-        accuracy = accuracy_score(y_true, y_pred)
-        precision = precision_score(y_true, y_pred, zero_division=0)
-        recall = recall_score(y_true, y_pred, zero_division=0)
-        f1 = f1_score(y_true, y_pred, zero_division=0)
-
-        results = {
-            "model_name": self.model_name,
-            "weight_used": self.file_name,
-            "test_loss": avg_test_loss,
-            "accuracy": accuracy,
-            "precision": precision,
-            "recall": recall,
-            "f1_score": f1
-        }
-
-        results_dir = os.path.join(os.getcwd(), "results")
-        os.makedirs(results_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        results_path = os.path.join(
-            results_dir, f"{self.model_name}_{timestamp}_results.json")
-        with open(results_path, "w") as f:
-            json.dump(results, f, indent=4)
-
-        log.info(f"True Labels: {y_true}")
-        log.info(f"Pred Labels: {y_pred}")
-        log.info(f"Test Loss: {avg_test_loss:.4f}")
-        log.info(f"Test results saved at: {results_path}")
-        return avg_test_loss
 
     def export(self):
         """
@@ -396,7 +301,7 @@ if __name__ == "__main__":
         description="Run models for training or evaluation")
     parser.add_argument('--models', nargs='+', required=True,
                         help='List of models to train, save, or evaluate')
-    parser.add_argument('--mode', choices=['train', 'evaluate', 'export'],
+    parser.add_argument('--mode', choices=['train', 'export'],
                         required=True, help='Mode of operation: train, evaluate for performance benchmark or export for mobile app.')
     parser.add_argument('--k_fold', '-k', default=10,
                         help="Number of folds to be set for the cross validation.")
@@ -426,8 +331,6 @@ if __name__ == "__main__":
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
     parser.add_argument("--patience", type=int,
                         help="Patience for early stopping (default = 3)", default=3)
-    parser.add_argument("--min_loss", type=float,
-                        help="Minimum loss needed to save the weights", default=0.5000)
 
     args = parser.parse_args()
 
@@ -464,7 +367,6 @@ if __name__ == "__main__":
     file_name = args.file if args.file else ""
     batch_size = args.batch
     patience = args.patience
-    min_loss = args.min_loss
     roi = args.roi
     roi_weight = args.roi_weight
     fill_noise = args.fill_noise
@@ -476,7 +378,7 @@ if __name__ == "__main__":
         runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         dimensions=dimensions, model_name=model_name, file_name=file_name,
-                        min_loss=min_loss, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers, k=k)
+                        roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers, k=k)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):
@@ -484,8 +386,6 @@ if __name__ == "__main__":
                     "Dataset does not exist for training, please download using data_setup.py before training.")
                 sys.exit(1)
             runner.train_with_cross_validation()
-        elif mode == "evaluate":
-            runner.test()
         elif mode == "export":
             runner.export()
 
