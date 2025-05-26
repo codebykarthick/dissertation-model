@@ -192,6 +192,8 @@ class Runner:
                 log.info(
                     f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
                 metrics = {
+                    "model": self.model_name,
+                    "fold": (fold + 1),
                     "accuracy": accuracy_score(val_labels_int, val_preds_bin),
                     "precision": precision_score(val_labels_int, val_preds_bin),
                     "recall": current_recall,
