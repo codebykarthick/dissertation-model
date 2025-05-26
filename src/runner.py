@@ -195,7 +195,7 @@ class Runner:
                 log.info(
                     f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Recall: {current_recall}")
 
-                if current_recall >= best_recall:
+                if (current_recall >= best_recall and current_recall != 0) or (current_recall >= 0.7):
                     best_recall = current_recall
                     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                     model_file = f"{self.model_name}_fold{fold+1}_{timestamp}_recall_{best_recall:.4f}.pth"
