@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import cast
 
 import torch
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (accuracy_score, f1_score, precision_score,
+                             recall_score)
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -14,16 +15,13 @@ from tqdm import tqdm
 from ultralytics import YOLO
 
 from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import get_efficientnet_tuned, get_mobilenetv3_tuned
+from models.pretrained_models import (get_efficientnet_tuned,
+                                      get_mobilenetv3_tuned)
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
-from util.data_loader import (
-    ClassificationDataset,
-    ResizeAndPad,
-    generate_eval_transforms,
-    generate_train_transforms,
-    get_data_loaders,
-)
+from util.data_loader import (ClassificationDataset, ResizeAndPad,
+                              generate_eval_transforms,
+                              generate_train_transforms, get_data_loaders)
 from util.logger import setup_logger
 
 log = setup_logger()
@@ -471,7 +469,7 @@ if __name__ == "__main__":
     roi_weight = args.roi_weight
     fill_noise = args.fill_noise
     num_workers = args.workers
-    k = args.k
+    k = args.k_fold
 
     for model_name in list_of_models:
         model, dimensions = create_model_from_name(model_name)
