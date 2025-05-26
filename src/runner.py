@@ -137,13 +137,10 @@ class Runner:
                 optimizer, mode='min', factor=0.5, patience=3)
             criterion = self.criterion
 
-            # Use best_recall for model selection
-            # And best val loss to update further.
-            best_recall = 0.0
-            best_val_loss = float('inf')
             no_improve = 0
-            timestamp = None
-            model_file = None
+            timestamp, model_file = None, None
+            m_precision, m_recall, m_loss, m_acc = CONSTANTS["thresholds"].values(
+            )
 
             for epoch in range(self.epochs):
                 model.train()
@@ -193,36 +190,33 @@ class Runner:
                 current_recall = recall_score(val_labels_int, val_preds_bin)
 
                 log.info(
-                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Recall: {current_recall}")
+                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+                metrics = {
+                    "accuracy": accuracy_score(val_labels_int, val_preds_bin),
+                    "precision": precision_score(val_labels_int, val_preds_bin),
+                    "recall": current_recall,
+                    "f1_score": f1_score(val_labels_int, val_preds_bin),
+                    "val_loss": avg_val_loss
+                }
 
-                if (current_recall >= best_recall and current_recall != 0) or (current_recall >= 0.7):
-                    best_recall = current_recall
+                # Need to focus on all round performance for checkpointing.
+                if metrics["recall"] >= m_recall and metrics["precision"] >= m_precision and metrics["val_loss"] < m_loss and metrics["accuracy"] >= m_acc:
                     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                    model_file = f"{self.model_name}_fold{fold+1}_{timestamp}_recall_{best_recall:.4f}.pth"
+                    model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
 
-                    if best_val_loss > avg_val_loss:
-                        best_val_loss = avg_val_loss
-                        self.model = model
-                        self.save_model(model_file)
+                    self.model = model
+                    self.save_model(model_file)
 
-                        metrics = {
-                            "accuracy": accuracy_score(val_labels_int, val_preds_bin),
-                            "precision": precision_score(val_labels_int, val_preds_bin),
-                            "recall": best_recall,
-                            "f1_score": f1_score(val_labels_int, val_preds_bin),
-                            "val_loss": avg_val_loss
-                        }
+                    results_dir = os.path.join(os.getcwd(), "results")
+                    os.makedirs(results_dir, exist_ok=True)
+                    result_file = os.path.join(
+                        results_dir, f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json")
+                    with open(result_file, "w") as f:
+                        json.dump(metrics, f, indent=4)
+                    log.info(
+                        f"Saved metrics for Fold {fold + 1} in: {result_file}")
 
-                        results_dir = os.path.join(os.getcwd(), "results")
-                        os.makedirs(results_dir, exist_ok=True)
-                        result_file = os.path.join(
-                            results_dir, f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json")
-                        with open(result_file, "w") as f:
-                            json.dump(metrics, f, indent=4)
-                        log.info(
-                            f"Saved metrics for Fold {fold + 1} in: {result_file}")
-
-                        no_improve = 0
+                    no_improve = 0
                 else:
                     no_improve += 1
                     if no_improve >= self.patience:

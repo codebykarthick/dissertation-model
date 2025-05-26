@@ -13,5 +13,11 @@ CONSTANTS = {
     },
     "weights_path": "weights",
     "results_path": "results",
-    "train_split": 0.7
+    "train_split": 0.7,
+    "thresholds": {
+        "precision": 0.5,
+        "recall": 0.8,
+        "val_loss": 0.7,
+        "accuracy": 0.8
+    }
 }
