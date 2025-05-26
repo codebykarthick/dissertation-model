@@ -139,8 +139,7 @@ class Runner:
 
             no_improve = 0
             timestamp, model_file = None, None
-            m_precision, m_recall, m_loss, m_acc = CONSTANTS["thresholds"].values(
-            )
+            best_f1 = 0.00
 
             for epoch in range(self.epochs):
                 model.train()
@@ -188,6 +187,7 @@ class Runner:
                 val_preds_bin = [1 if p > 0.5 else 0 for p in val_preds]
                 val_labels_int = [int(l) for l in val_labels]
                 current_recall = recall_score(val_labels_int, val_preds_bin)
+                current_f1 = f1_score(val_labels_int, val_preds_bin)
 
                 log.info(
                     f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
@@ -195,12 +195,13 @@ class Runner:
                     "accuracy": accuracy_score(val_labels_int, val_preds_bin),
                     "precision": precision_score(val_labels_int, val_preds_bin),
                     "recall": current_recall,
-                    "f1_score": f1_score(val_labels_int, val_preds_bin),
+                    "f1_score": current_f1,
                     "val_loss": avg_val_loss
                 }
 
                 # Need to focus on all round performance for checkpointing.
-                if metrics["recall"] >= m_recall and metrics["precision"] >= m_precision and metrics["val_loss"] < m_loss and metrics["accuracy"] >= m_acc:
+                if current_f1 >= best_f1:
+                    best_f1 = current_f1
                     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                     model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
 
