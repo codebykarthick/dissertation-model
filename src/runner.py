@@ -185,13 +185,13 @@ class Runner:
                 avg_val_loss = total_val_loss / len(val_loader)
                 scheduler.step(avg_val_loss)
 
-                log.info(
-                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
-
                 # Compute recall and use it for model checkpointing
                 val_preds_bin = [1 if p > 0.5 else 0 for p in val_preds]
                 val_labels_int = [int(l) for l in val_labels]
                 current_recall = recall_score(val_labels_int, val_preds_bin)
+
+                log.info(
+                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Recall: {current_recall}")
 
                 if current_recall > best_recall:
                     best_recall = current_recall
