@@ -5,10 +5,11 @@ import sys
 from datetime import datetime
 from typing import cast
 
+import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import KFold
-from torch.utils.data import DataLoader
+from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 from ultralytics import YOLO
@@ -26,7 +27,6 @@ from util.data_loader import (
     ResizeAndPad,
     generate_eval_transforms,
     generate_train_transforms,
-    get_data_loaders,
 )
 from util.logger import setup_logger
 
@@ -50,24 +50,15 @@ class Runner:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.lr = lr
+        self.is_sampling_weighted = is_oversampled
+        self.is_loss_weighted = is_loss_weighted
 
         img_path = os.path.join(os.getcwd(), 'dataset')
-
-        self.train_loader, self.val_loader, self.test_loader, self.pos_weight = get_data_loaders(
-            dimensions=dimensions, images_path=img_path,
-            is_sampling_weighted=is_oversampled, batch_size=batch_size, fill_with_noise=fill_noise,
-            num_workers=num_workers)
 
         self.dataset = ClassificationDataset(img_path)
 
         if roi:
             self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
-
-        if is_loss_weighted:
-            self.criterion = torch.nn.BCEWithLogitsLoss(
-                pos_weight=self.pos_weight)
-        else:
-            self.criterion = torch.nn.BCEWithLogitsLoss()
 
         # Using Adam optimiser
         self.optimiser = torch.optim.Adam(
@@ -101,10 +92,15 @@ class Runner:
     def train_with_cross_validation(self):
         """Training using k-fold cross validation to ensure equal training in all folds."""
         log.info(f"Starting {self.k}-Fold Cross Validation training")
-        kf = KFold(n_splits=self.k, shuffle=True, random_state=42)
+        kf = StratifiedKFold(n_splits=self.k, shuffle=True, random_state=42)
         dataset = self.dataset
+        # Prepare label array for stratification
+        labels_array = np.array([dataset.label_map[img]
+                                for img in dataset.images])
 
-        for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
+        for fold, (train_idx, val_idx) in enumerate(
+            kf.split(X=np.zeros(len(dataset)), y=labels_array)
+        ):
             log.info(f"Fold {fold + 1}/{self.k} --------------------------")
 
             # Subset datasets
@@ -119,10 +115,37 @@ class Runner:
                 self.dimensions, fill_with_noise=self.fill_noise
             )
 
+            sampler = None
+            criterion = torch.nn.BCEWithLogitsLoss()
+
+            if self.is_sampling_weighted or self.is_loss_weighted:
+                # assuming dataset[i] -> (img, label)
+                labels = np.array([dataset[i][1] for i in train_idx])
+                class_counts = np.bincount(labels)
+                # weight for each class = 1 / count
+                class_weights = 1. / class_counts
+                sample_weights = class_weights[labels]
+
+                if self.is_sampling_weighted:
+                    sampler = WeightedRandomSampler(
+                        weights=cast(list[float], sample_weights.tolist()),
+                        num_samples=len(sample_weights),
+                        replacement=True
+                    )
+                else:
+                    pos_weight = torch.tensor(
+                        class_weights[1] / class_weights[0], device=self.device)
+                    criterion = torch.nn.BCEWithLogitsLoss(
+                        pos_weight=pos_weight)
+
             # Dataloaders
             train_loader = DataLoader(
-                train_subset, batch_size=self.batch_size, shuffle=True,
-                num_workers=self.num_workers, pin_memory=True
+                train_subset,
+                batch_size=self.batch_size,
+                sampler=sampler,
+                shuffle=(sampler is None),
+                num_workers=self.num_workers,
+                pin_memory=True
             )
             val_loader = DataLoader(
                 val_subset, batch_size=self.batch_size, shuffle=False,
@@ -135,7 +158,6 @@ class Runner:
             optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.5, patience=3)
-            criterion = self.criterion
 
             no_improve = 0
             timestamp, model_file = None, None
@@ -144,7 +166,7 @@ class Runner:
             for epoch in range(self.epochs):
                 model.train()
                 total_loss = 0.0
-                for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
+                for images, labels in tqdm(train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
                     if self.roi:
                         images = self._apply_roi_and_crop(images)
                     else:
