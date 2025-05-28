@@ -9,22 +9,24 @@ import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import StratifiedKFold
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 from ultralytics import YOLO
 
-from models.lfd_cnn import LFD_CNN
-from models.pretrained_models import (
+from models.classification.lfd_cnn import LFD_CNN
+from models.classification.pretrained_models import (
     get_efficientnet_tuned,
     get_mobilenetv3_tuned,
     get_shufflenet_tuned,
 )
+from models.siamese.mobilenet import SiameseMobileNet
 from util.cloud_tools import auto_shutdown
 from util.constants import CONSTANTS
 from util.data_loader import (
     ClassificationDataset,
     ResizeAndPad,
+    SiameseDataset,
     generate_eval_transforms,
     generate_train_transforms,
 )
@@ -34,13 +36,12 @@ log = setup_logger()
 
 
 class Runner:
-    def __init__(self, model: torch.nn.Module, model_name: str, lr: float, epochs: int,
+    def __init__(self, model_name: str, lr: float, epochs: int,
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int, dimensions: list[int], file_name: str,
-                 roi: bool, roi_weight: str, fill_noise: bool, num_workers: int,
-                 k: int = 10):
+                 roi: bool, roi_weight: str, fill_noise: bool, num_workers: int, type: str,
+                 dataset: Dataset, k: int = 10):
         self.roi = roi
-        self.model = model
         self.model_name = model_name
         self.patience = patience
         self.k = k
@@ -52,20 +53,11 @@ class Runner:
         self.lr = lr
         self.is_sampling_weighted = is_oversampled
         self.is_loss_weighted = is_loss_weighted
-
-        img_path = os.path.join(os.getcwd(), 'dataset')
-
-        self.dataset = ClassificationDataset(img_path)
+        self.dataset = dataset
+        self.type = type
 
         if roi:
             self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
-
-        # Using Adam optimiser
-        self.optimiser = torch.optim.Adam(
-            self.model.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimiser, mode='min', factor=0.5, patience=3, min_lr=10-6
-        )
 
         self.epochs = epochs
         self.file_name = file_name
@@ -89,11 +81,20 @@ class Runner:
 
         return torch.stack(cropped_images).to(self.device)
 
-    def train_with_cross_validation(self):
+    def train(self):
+        if self.type == "classification":
+            self.train_classification_with_cross_validation()
+        elif self.type == "siamese":
+            self.train_siamese_with_cross_validation()
+
+    def train_siamese_with_cross_validation(self):
+        ...
+
+    def train_classification_with_cross_validation(self):
         """Training using k-fold cross validation to ensure equal training in all folds."""
         log.info(f"Starting {self.k}-Fold Cross Validation training")
         kf = StratifiedKFold(n_splits=self.k, shuffle=True, random_state=42)
-        dataset = self.dataset
+        dataset = cast(ClassificationDataset, self.dataset)
         # Prepare label array for stratification
         labels_array = np.array([dataset.label_map[img]
                                 for img in dataset.images])
@@ -153,7 +154,7 @@ class Runner:
             )
 
             # New model instance per fold
-            model, _ = create_model_from_name(self.model_name)
+            model, _ = create_model_from_name(self.model_name, self.type)
             model = model.to(self.device)
             optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -295,25 +296,29 @@ class Runner:
         log.info(f"Model loaded successfully!")
 
 
-def create_model_from_name(name: str) -> tuple[torch.nn.Module, list[int]]:
+def create_model_from_name(name: str, type: str) -> tuple[torch.nn.Module, list[int]]:
     """Create the model instance from the name of the model specified. Halts execution
     if model name is wrong.
 
     Args:
         name (str): Name of the model to be used.
+        type (str): Type of model — classification or siamese
 
     Returns:
         tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
     """
-
-    if name == "cnn":
-        model = LFD_CNN()
-    elif name == "mobilenetv3":
-        model = get_mobilenetv3_tuned()
-    elif name == "efficientnet":
-        model = get_efficientnet_tuned()
-    elif name == "shufflenet":
-        model = get_shufflenet_tuned()
+    if type == "classification":
+        if name == "cnn":
+            model = LFD_CNN()
+        elif name == "mobilenetv3":
+            model = get_mobilenetv3_tuned()
+        elif name == "efficientnet":
+            model = get_efficientnet_tuned()
+        elif name == "shufflenet":
+            model = get_shufflenet_tuned()
+    elif type == "siamese":
+        if name == "mobilenetv3":
+            model = SiameseMobileNet()
     else:
         log.error(f"{name} is not a valid model.")
         sys.exit(1)
@@ -324,10 +329,15 @@ def create_model_from_name(name: str) -> tuple[torch.nn.Module, list[int]]:
 
 
 if __name__ == "__main__":
-    valid_models = ["mobilenetv3", "cnn", "efficientnet", "shufflenet"]
+    valid_models = {
+        "classification": ["mobilenetv3", "cnn", "efficientnet", "shufflenet"],
+        "siamese": ["mobilenetv3"]
+    }
 
     parser = argparse.ArgumentParser(
         description="Run models for training or evaluation")
+    parser.add_argument('--type', required=True,
+                        help="Type of training to perform.")
     parser.add_argument('--models', nargs='+', required=True,
                         help='List of models to train, save, or evaluate')
     parser.add_argument('--mode', choices=['train', 'export'],
@@ -364,11 +374,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Manual validation of the supplied arguments
-    for model_name in args.models:
-        if model_name not in valid_models:
-            parser.error(
-                f"Invalid model name '{model_name}'. Valid options are: {', '.join(valid_models)}")
-    if args.mode == 'evaluate' or args.mode == 'export':
+    if args.type not in valid_models.keys():
+        parser.error("--type can only be either classification or siamese.")
+    if args.mode == 'export':
         if not args.file:
             parser.error(
                 '--file has to be specified when the mode is evaluate or export')
@@ -401,20 +409,30 @@ if __name__ == "__main__":
     fill_noise = args.fill_noise
     num_workers = args.workers
     k = args.k_fold
+    type = args.type
+
+    image_dir = os.path.join(os.getcwd(), 'dataset')
+
+    if type == "classification":
+        dataset = ClassificationDataset(image_dir=image_dir)
+    elif type == "siamese":
+        dataset = SiameseDataset(image_dir, [], [])
 
     for model_name in list_of_models:
-        model, dimensions = create_model_from_name(model_name)
-        runner = Runner(model=model, lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
+        model, dimensions = create_model_from_name(model_name, type)
+
+        runner = Runner(lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         dimensions=dimensions, model_name=model_name, file_name=file_name,
-                        roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers, k=k)
+                        roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers,
+                        type=type, dataset=dataset, k=k)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):
                 log.error(
                     "Dataset does not exist for training, please download using data_setup.py before training.")
                 sys.exit(1)
-            runner.train_with_cross_validation()
+            runner.train()
         elif mode == "export":
             runner.export()
 

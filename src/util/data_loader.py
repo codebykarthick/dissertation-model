@@ -1,13 +1,11 @@
 import os
-from typing import cast
 
 import cv2
 import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
-from torch import Tensor
-from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler, random_split
+from torch.utils.data import Dataset
 from torchvision import transforms
 
 from util.constants import CONSTANTS
@@ -81,6 +79,60 @@ class ClassificationDataset(Dataset):
 
     def set_transforms(self, defined_transforms):
         self.defined_transforms = defined_transforms
+
+
+class SiameseDataset(Dataset):
+    def __init__(self, image_dir: str, positive_anchors: list[str], negative_anchors: list[str], transform=None):
+        super().__init__()
+        self.image_dir = os.path.join(image_dir, 'Images')
+        self.label_file = os.path.join(image_dir, 'labels.csv')
+        self.labels_df = pd.read_csv(self.label_file)
+        self.label_map = dict(
+            zip(self.labels_df['file_id'], self.labels_df['is_asp_fungi']))
+        self.transform = transform
+
+        self.image_list = sorted(os.listdir(self.image_dir))
+        self.positive_anchors = [
+            img for img in positive_anchors if img in self.label_map]
+        self.negative_anchors = [
+            img for img in negative_anchors if img in self.label_map]
+
+        self.pairs = self._generate_pairs()
+
+    def _generate_pairs(self):
+        pairs = []
+
+        # Positive pairs: same class as anchor
+        for anchor in self.positive_anchors:
+            anchor_label = self.label_map[anchor]
+            for candidate in self.image_list:
+                if candidate != anchor and self.label_map.get(candidate) == anchor_label:
+                    pairs.append((anchor, candidate, 1))
+
+        # Negative pairs: different class
+        for anchor in self.negative_anchors:
+            anchor_label = self.label_map[anchor]
+            for candidate in self.image_list:
+                if candidate != anchor and self.label_map.get(candidate) != anchor_label:
+                    pairs.append((anchor, candidate, 0))
+
+        return pairs
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, index):
+        anchor_name, candidate_name, label = self.pairs[index]
+        img1 = Image.open(os.path.join(
+            self.image_dir, anchor_name)).convert("RGB")
+        img2 = Image.open(os.path.join(
+            self.image_dir, candidate_name)).convert("RGB")
+
+        if self.transform:
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
+
+        return img1, img2, torch.tensor(label, dtype=torch.float32)
 
 
 def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = False) -> transforms.Compose:
