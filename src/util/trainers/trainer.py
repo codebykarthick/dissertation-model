@@ -106,7 +106,7 @@ class Trainer:
         raise NotImplementedError("Export method must be overriden!")
 
     def evaluate_and_save(self, current_metric: float, best_metric: float, model: torch.nn.Module,
-                          metrics: dict[str, float], fold: int = 0) -> bool:
+                          metrics: dict[str, float], fold: int = 0, save_model: bool = True) -> bool:
         """Evaluate if it satifies conditions before saving the model and metrics results.
 
         Args:
@@ -123,7 +123,8 @@ class Trainer:
             timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
 
-            self.save_model(model, model_file)
+            if save_model:
+                self.save_model(model, model_file)
 
             filename = f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json"
             self.save_results(metrics=metrics, filename=filename)
