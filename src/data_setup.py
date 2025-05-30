@@ -46,8 +46,7 @@ def download_classification_dataset():
 def download_yolo_dataset():
     """Download the dataset for yolo finetuning with images and bounding boxes for detection.
     """
-    data_dir = os.path.join(os.getcwd(), "dataset", "yolo")
-    _download(data_dir=data_dir, download_url="")
+    raise NotImplementedError("RoI dataset has not been created yet!")
 
 
 if __name__ == "__main__":
