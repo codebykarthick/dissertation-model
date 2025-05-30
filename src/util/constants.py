@@ -13,5 +13,8 @@ CONSTANTS = {
     },
     "weights_path": "weights",
     "results_path": "results",
-    "train_split": 0.7
+    "siamese": {
+        "positive_anchors": [],
+        "negative_anchors": []
+    }
 }
