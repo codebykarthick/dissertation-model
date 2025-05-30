@@ -40,7 +40,7 @@ def download_classification_dataset():
 
     data_dir = os.path.join(os.getcwd(), "dataset")
     _download(data_dir=data_dir,
-              download_url="https://drive.google.com/uc?id=13iUpYrgBDVEXBYv2EdXyi3wU_NYuoTRZ")
+              download_url="https://drive.google.com/uc?id=1I9XWVEN-aFm1_sdtvJsgKnJjUH2fS3Xg")
 
 
 def download_yolo_dataset():
