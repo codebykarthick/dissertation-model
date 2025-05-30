@@ -1,0 +1,164 @@
+import json
+import os
+import sys
+from datetime import datetime
+
+import torch
+from torchvision import transforms
+from ultralytics import YOLO
+
+from models.classification.lfd_cnn import LFD_CNN
+from models.classification.pretrained_models import (
+    get_efficientnet_tuned,
+    get_mobilenetv3_tuned,
+    get_shufflenet_tuned,
+)
+from models.siamese.mobilenet import SiameseMobileNet
+from util.constants import CONSTANTS
+from util.data_loader import ResizeAndPad
+from util.logger import setup_logger
+
+
+class Trainer:
+    """The base class from which all trainers should inherit to implement their own logic.
+    """
+
+    def __init__(self, roi: bool, fill_noise: bool, model_name: str,
+                 num_workers: int, k: int, is_sampling_weighted: bool, is_loss_weighted: bool,
+                 batch_size: int, epochs: int, task_type: str, lr: float, patience: int,
+                 roi_weight: str = "", delta=0.02):
+        self.log = setup_logger()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model_name = model_name
+        self.fill_noise = fill_noise
+        self.num_workers = num_workers
+        self.k = k
+        self.is_sampling_weighted = is_sampling_weighted
+        self.is_loss_weighted = is_loss_weighted
+        self.batch_size = batch_size
+
+        self.epochs = epochs
+        self.task_type = task_type
+        self.lr = lr
+        self.patience = patience
+        self.delta = delta
+
+        if roi:
+            self.roi = roi
+            self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
+
+    def _apply_roi_and_crop(self, images):
+        pil_images = [transforms.ToPILImage()(img.cpu()) for img in images]
+        results = self.roi_model(pil_images, verbose=False)
+        cropped_images = []
+
+        for img_pil, img_tensor, result in zip(pil_images, images, results):
+            if result.boxes:
+                box = result.boxes.xyxy[0].cpu().numpy().astype(int)
+                x1, y1, x2, y2 = box
+                cropped = img_pil.crop((x1, y1, x2, y2))
+                resized = ResizeAndPad(
+                    (img_tensor.shape[2], img_tensor.shape[1]), self.fill_noise)(cropped)
+                cropped_images.append(transforms.ToTensor()(resized))
+            else:
+                cropped_images.append(img_tensor)
+
+        return torch.stack(cropped_images).to(self.device)
+
+    def create_model_from_name(self, name: str, type: str) -> tuple[torch.nn.Module, list[int]]:
+        """Create the model instance from the name of the model specified. Halts execution
+        if model name is wrong.
+
+        Args:
+            name (str): Name of the model to be used.
+            type (str): Type of model — classification or siamese
+
+        Returns:
+            tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
+        """
+        if type == "classification":
+            if name == "cnn":
+                model = LFD_CNN()
+            elif name == "mobilenetv3":
+                model = get_mobilenetv3_tuned()
+            elif name == "efficientnet":
+                model = get_efficientnet_tuned()
+            elif name == "shufflenet":
+                model = get_shufflenet_tuned()
+        elif type == "siamese":
+            if name == "mobilenetv3":
+                model = SiameseMobileNet()
+        else:
+            self.log.error(f"{name} is not a valid model.")
+            sys.exit(1)
+
+        dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
+
+        return model, dimensions
+
+    def train(self):
+        raise NotImplementedError("Train method must be overriden!")
+
+    def evaluate(self):
+        raise NotImplementedError("Evaluate method must be overriden!")
+
+    def export(self):
+        raise NotImplementedError("Export method must be overriden!")
+
+    def evaluate_and_save(self, current_metric: float, best_metric: float, model: torch.nn.Module,
+                          metrics: dict[str, float], fold: int = 0) -> bool:
+        """Evaluate if it satifies conditions before saving the model and metrics results.
+
+        Args:
+            current_metric (float): The value of the metric being evaluated for the current epoch.
+            best_metric (float): The best value of the metric so far.
+            model (torch.nn.Module): The model to save.
+            metrics (dict[str, float]): The metrics to save.
+            fold (int): The fold for naming.
+
+        Returns:
+            bool: Returns True if it was saved, False otherwise for early stopping.
+        """
+        if current_metric > best_metric and current_metric > 0 and (best_metric - current_metric) > self.delta:
+            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
+
+            self.save_model(model, model_file)
+
+            filename = f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json"
+            self.save_results(metrics=metrics, filename=filename)
+            self.log.info(
+                f"Saved metrics for Fold {fold + 1} in: {filename}")
+            return True
+        return False
+
+    def save_model(self, model: torch.nn.Module, filename="sample.pth"):
+        """Save the model weights as a pth file in weights/ directory
+
+        Args:
+            filename (str, optional): Filename to save the weights as. Defaults to "sample.pth".
+        """
+        model_weights_dir = os.path.join(
+            os.getcwd(), CONSTANTS["weights_path"], self.model_name)
+
+        if not os.path.exists(model_weights_dir):
+            self.log.info(f"Creating folder at: {model_weights_dir}")
+            os.makedirs(model_weights_dir, exist_ok=True)
+
+        model_filepath = os.path.join(model_weights_dir, filename)
+
+        torch.save(model.state_dict(), model_filepath)
+        self.log.info(f"Model saved in: {filename}")
+
+    def save_results(self, metrics: dict[str, float], filename="sample.json"):
+        """Save the result metrics as a json file
+
+        Args:
+            filename (str, optional): The filename to save as. Defaults to "sample.json".
+        """
+        results_dir = os.path.join(os.getcwd(), "results")
+        os.makedirs(results_dir, exist_ok=True)
+        result_file = os.path.join(
+            results_dir, filename)
+        with open(result_file, "w") as f:
+            json.dump(metrics, f, indent=4)
