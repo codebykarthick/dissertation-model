@@ -169,7 +169,7 @@ class ClassificationCrossValidationTrainer(Trainer):
                 }
 
                 if self.evaluate_and_save(current_metric=current_f1, best_metric=best_f1, model=model,
-                                          metrics=metrics, fold=fold):
+                                          metrics=metrics, fold=fold, save_model=False):
                     # Update our best and reset counter.
                     best_f1 = current_f1
                     no_improve = 0
