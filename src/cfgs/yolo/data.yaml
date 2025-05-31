@@ -1,5 +1,0 @@
-train: dataset/roi/train
-val: dataset/roi/val
-
-names: 
-  0: test_window

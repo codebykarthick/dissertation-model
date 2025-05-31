@@ -173,3 +173,5 @@ cython_debug/
 # Folders that are not necessary / too big to push
 dataset/
 logs/
+# Downloaded as part of YOLO's check can be ignored.
+yolov11n.pt

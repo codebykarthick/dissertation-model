@@ -9,12 +9,14 @@ from ultralytics import YOLO
 from util.cloud_tools import auto_shutdown
 from util.logger import logger
 
+BASE_WEIGHT_PATH = "weights/yolo/yolov11s.pt"
 
-def download_yolo_baseweight():
+
+def _download_yolo_baseweight():
     """Downloads the base weight for the YOLO model, to fine-tune further.
     """
 
-    if not os.path.exists("weights/yolo/yolov11s.pt"):
+    if not os.path.exists(BASE_WEIGHT_PATH):
         os.makedirs("weights/yolo")
         logger.info("Downloading base weight for YOLOv11s for finetuning.")
         weight_url = "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt"
@@ -23,7 +25,7 @@ def download_yolo_baseweight():
 
         total_size = int(response.headers.get('content-length', 0))
 
-        with open("weights/yolo/yolov11s.pt", "wb") as f, tqdm(
+        with open(BASE_WEIGHT_PATH, "wb") as f, tqdm(
             desc="Downloading weight",
             total=total_size,
             unit='B',
@@ -39,18 +41,16 @@ def download_yolo_baseweight():
 
 
 class RoiRunner:
-    def __init__(self, epochs: int, model: YOLO, file_name: str, batch_size: int, lr: float) -> None:
+    def __init__(self, epochs: int, model: YOLO, file_name: str, batch_size: int) -> None:
         self.epochs = epochs
         self.model = model
         self.file_name = file_name
         self.batch_size = batch_size
-        self.lr = lr
 
     def train(self):
-        self.model.train(data="dataset/roi/",
-                         cfg="cfgs/yolo/data.yaml",
+        self.model.train(model=BASE_WEIGHT_PATH, data="dataset/roi/data.yaml",
                          project="weights/yolo",
-                         epochs=self.epochs, batch=self.batch_size, lr0=self.lr)
+                         epochs=self.epochs, batch=self.batch_size)
 
     def evaluate(self):
         self.load_model(self.file_name)
@@ -72,8 +72,6 @@ if __name__ == "__main__":
                         required=True, help="Mode of operation: Train or evaluate performance.")
     parser.add_argument('--batch', type=int, default=8,
                         help="Set the size of the batch for training.")
-    parser.add_argument('--lr', type=float, default=1e-5,
-                        help="Set the learning rate for the YOLO fine tuning.")
     parser.add_argument('--epochs', type=int, default=50,
                         help='Number of epochs to train')
     parser.add_argument(
@@ -89,7 +87,6 @@ if __name__ == "__main__":
     epochs = args.epochs
     file_name = args.file if args.file else ""
     batch_size = args.batch
-    lr = args.lr
 
     # Validation of arguments
     if args.mode == 'evaluate':
@@ -105,12 +102,12 @@ if __name__ == "__main__":
             sys.exit(1)
 
     # Base weights are needed no matter if training or evaluating
-    download_yolo_baseweight()
+    _download_yolo_baseweight()
 
-    model = YOLO("weights/yolo/yolov11s.pt", task="detect")
+    model = YOLO(BASE_WEIGHT_PATH, task="detect")
 
     runner = RoiRunner(epochs=epochs, model=model, file_name=file_name,
-                       batch_size=batch_size, lr=lr)
+                       batch_size=batch_size)
 
     if mode == "train":
         # Check if the dataset for RoI training exists before proceeding
