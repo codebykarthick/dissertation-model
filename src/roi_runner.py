@@ -47,12 +47,12 @@ class RoiRunner:
         self.lr = lr
 
     def train(self):
-        self.model.train(cfg="dataset/yolo/config.yaml",
+        self.model.train(cfg="cfgs/yolo/data.yaml",
                          epochs=self.epochs, batch_size=self.batch_size, lr=self.lr)
 
     def evaluate(self):
         self.load_model(self.file_name)
-        self.model.val(data="dataset/yolo/config.yaml")
+        self.model.val(data="cfgs/yolo/data.yaml")
 
     def load_model(self, path: str):
         """Load the YOLO model weights from a specific path
