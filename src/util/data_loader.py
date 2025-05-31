@@ -150,7 +150,7 @@ def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = Fal
         ApplyCLAHE(),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomRotation(degrees=15),
+        transforms.RandomRotation(degrees=10),
         transforms.RandomResizedCrop(dimensions, scale=(0.8, 1.0)),
         transforms.ColorJitter(
             brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
