@@ -8,11 +8,9 @@ from torchvision import transforms
 from ultralytics import YOLO
 
 from models.classification.lfd_cnn import LFD_CNN
-from models.classification.pretrained_models import (
-    get_efficientnet_tuned,
-    get_mobilenetv3_tuned,
-    get_shufflenet_tuned,
-)
+from models.classification.pretrained_models import (get_efficientnet_tuned,
+                                                     get_mobilenetv3_tuned,
+                                                     get_shufflenet_tuned)
 from models.siamese.mobilenet import SiameseMobileNet
 from util.constants import CONSTANTS
 from util.data_loader import ResizeAndPad
@@ -65,18 +63,18 @@ class Trainer:
 
         return torch.stack(cropped_images).to(self.device)
 
-    def create_model_from_name(self, name: str, type: str) -> tuple[torch.nn.Module, list[int]]:
+    def create_model_from_name(self, name: str, task_type: str) -> tuple[torch.nn.Module, list[int]]:
         """Create the model instance from the name of the model specified. Halts execution
         if model name is wrong.
 
         Args:
             name (str): Name of the model to be used.
-            type (str): Type of model — classification or siamese
+            task_type (str): Type of model — classification or siamese
 
         Returns:
             tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
         """
-        if type == "classification":
+        if task_type == "classification":
             if name == "cnn":
                 model = LFD_CNN()
             elif name == "mobilenetv3":
@@ -85,11 +83,17 @@ class Trainer:
                 model = get_efficientnet_tuned()
             elif name == "shufflenet":
                 model = get_shufflenet_tuned()
-        elif type == "siamese":
+            else:
+                self.log.error(f"{name} is not a valid model.")
+                sys.exit(1)
+        elif task_type == "siamese":
             if name == "mobilenetv3":
                 model = SiameseMobileNet()
+            else:
+                self.log.error(f"{name} is not a valid model.")
+                sys.exit(1)
         else:
-            self.log.error(f"{name} is not a valid model.")
+            self.log.error(f"{task_type} is not a valid type.")
             sys.exit(1)
 
         dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
