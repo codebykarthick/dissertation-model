@@ -1,0 +1,5 @@
+train: dataset/roi/train
+val: dataset/roi/val
+
+nc: 1
+names: [test_window]
