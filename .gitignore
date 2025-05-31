@@ -174,4 +174,4 @@ cython_debug/
 dataset/
 logs/
 # Downloaded as part of YOLO's check can be ignored.
-yolov11n.pt
+**/yolo11n.pt
