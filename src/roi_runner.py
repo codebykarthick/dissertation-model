@@ -47,7 +47,8 @@ class RoiRunner:
         self.lr = lr
 
     def train(self):
-        self.model.train(data="cfgs/yolo/data.yaml",
+        self.model.train(data="dataset/roi/",
+                         cfg="cfgs/yolo/data.yaml",
                          project="weights/yolo",
                          epochs=self.epochs, batch=self.batch_size, lr0=self.lr)
 
