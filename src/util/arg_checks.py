@@ -15,6 +15,8 @@ def create_parser() -> ArgumentParser:
     """
     parser = ArgumentParser(
         description="Run models for training or evaluation")
+    parser.add_argument('--label', required=True,
+                        help="Label to save weights and results for better organisation.")
     parser.add_argument('--task_type', required=True,
                         help="Type of task to perform.")
     parser.add_argument('--models', nargs='+', required=True,

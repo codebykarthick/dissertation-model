@@ -5,9 +5,7 @@ from util.arg_checks import create_parser, validate_args
 from util.cloud_tools import auto_shutdown
 from util.logger import setup_logger
 from util.trainers.classification_trainer import (
-    ClassificationCrossValidationTrainer,
-    ClassificationTrainer,
-)
+    ClassificationCrossValidationTrainer, ClassificationTrainer)
 from util.trainers.siamese_trainer import SiameseTrainer
 
 log = setup_logger()
@@ -18,25 +16,25 @@ class Runner:
                  is_loss_weighted: bool, is_oversampled: bool,
                  batch_size: int, patience: int,
                  roi: bool, roi_weight: str, fill_noise: bool, num_workers: int, task_type: str,
-                 k: int = 10):
+                 label: str, k: int = 10):
         if task_type == "classification_crossval":
             self.trainer = ClassificationCrossValidationTrainer(
                 k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
                 epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
                 batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
-                num_workers=num_workers, task_type=task_type)
+                num_workers=num_workers, task_type=task_type, label=label)
         elif task_type == "classification":
             self.trainer = ClassificationTrainer(
                 k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
                 epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
                 batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
-                num_workers=num_workers, task_type=task_type)
+                num_workers=num_workers, task_type=task_type, label=label)
         elif task_type == "siamese":
             self.trainer = SiameseTrainer(
                 roi=roi, fill_noise=fill_noise, model_name=model_name, roi_weight=roi_weight,
                 num_workers=num_workers, k=k, is_sampling_weighted=is_oversampled,
                 is_loss_weighted=is_loss_weighted, batch_size=batch_size, epochs=epochs, lr=lr,
-                task_type=task_type, patience=patience)
+                task_type=task_type, patience=patience, label=label)
 
     def train(self):
         self.trainer.train()
@@ -77,12 +75,13 @@ if __name__ == "__main__":
     num_workers = args.workers
     k = args.k_fold
     task_type = args.task_type
+    label = args.label
 
     for model_name in list_of_models:
         runner = Runner(lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         model_name=model_name, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers,
-                        task_type=task_type, k=k)
+                        task_type=task_type, label=label, k=k)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):

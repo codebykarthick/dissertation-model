@@ -20,12 +20,12 @@ class ClassificationCrossValidationTrainer(Trainer):
 
     def __init__(self, k: int, fill_noise: bool, is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, num_workers: int,
                  model_name: str, epochs: int, task_type: str, lr: float, roi: bool, patience: int,
-                 roi_weight: str = "", delta=0.02):
+                 label: str = "", roi_weight: str = "", delta=0.02):
         super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
                          num_workers=num_workers, roi_weight=roi_weight, k=k,
                          is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
                          epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
-                         delta=delta)
+                         label=label, delta=delta)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.dataset = ClassificationDataset(image_dir)
@@ -183,9 +183,12 @@ class ClassificationCrossValidationTrainer(Trainer):
 class ClassificationTrainer(Trainer):
     def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
                  is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
-                 task_type: str, lr: float, patience: int, roi_weight: str = "", delta=0.02):
-        super().__init__(roi, fill_noise, model_name, num_workers, k, is_sampling_weighted,
-                         is_loss_weighted, batch_size, epochs, task_type, lr, patience, roi_weight, delta)
+                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02):
+        super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
+                         num_workers=num_workers, roi_weight=roi_weight, k=k,
+                         is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
+                         epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
+                         label=label, delta=delta)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         dataset = ClassificationDataset(image_dir)

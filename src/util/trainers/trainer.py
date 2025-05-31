@@ -25,7 +25,7 @@ class Trainer:
     def __init__(self, roi: bool, fill_noise: bool, model_name: str,
                  num_workers: int, k: int, is_sampling_weighted: bool, is_loss_weighted: bool,
                  batch_size: int, epochs: int, task_type: str, lr: float, patience: int,
-                 roi_weight: str = "", delta=0.02):
+                 label: str, roi_weight: str = "", delta=0.02):
         self.log = setup_logger()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
@@ -41,6 +41,7 @@ class Trainer:
         self.lr = lr
         self.patience = patience
         self.delta = delta
+        self.label = label
 
         if roi:
             self.roi = True
@@ -156,9 +157,9 @@ class Trainer:
             self.log.info(
                 f"Saved metrics for Fold {fold + 1} in: {filename}")
             self._cleanup_old_files(
-                pattern=f"weights/{self.model_name}/{self.model_name}_fold{fold+1}*.pth", retain_last=retain_last)
+                pattern=f"weights/{self.label}/{self.model_name}/{self.model_name}_fold{fold+1}*.pth", retain_last=retain_last)
             self._cleanup_old_files(
-                pattern=f"results/{self.model_name}_fold{fold+1}*.json", retain_last=retain_last)
+                pattern=f"results/{self.label}/{self.model_name}_fold{fold+1}*.json", retain_last=retain_last)
 
             return True
         return False
@@ -170,7 +171,7 @@ class Trainer:
             filename (str, optional): Filename to save the weights as. Defaults to "sample.pth".
         """
         model_weights_dir = os.path.join(
-            os.getcwd(), CONSTANTS["weights_path"], self.model_name)
+            os.getcwd(), CONSTANTS["weights_path"], self.label, self.model_name)
 
         if not os.path.exists(model_weights_dir):
             self.log.info(f"Creating folder at: {model_weights_dir}")
@@ -187,7 +188,7 @@ class Trainer:
         Args:
             filename (str, optional): The filename to save as. Defaults to "sample.json".
         """
-        results_dir = os.path.join(os.getcwd(), "results")
+        results_dir = os.path.join(os.getcwd(), self.label, "results")
         os.makedirs(results_dir, exist_ok=True)
         result_file = os.path.join(
             results_dir, filename)
