@@ -154,7 +154,7 @@ class Trainer:
             filename = f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json"
             self.save_results(metrics=metrics, filename=filename)
             self.log.info(
-                f"Saved metrics for Fold {fold + 1} in: {filename}, performing cleanup.")
+                f"Saved metrics for Fold {fold + 1} in: {filename}")
             self._cleanup_old_files(
                 pattern=f"weights/{self.model_name}/{self.model_name}_fold{fold+1}*.pth", retain_last=retain_last)
             self._cleanup_old_files(
