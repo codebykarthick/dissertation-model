@@ -49,7 +49,7 @@ class RoiRunner:
     def train(self):
         self.model.train(cfg="cfgs/yolo/data.yaml",
                          project="weights/yolo",
-                         epochs=self.epochs, batch_size=self.batch_size, lr=self.lr)
+                         epochs=self.epochs, batch=self.batch_size, lr0=self.lr)
 
     def evaluate(self):
         self.load_model(self.file_name)
