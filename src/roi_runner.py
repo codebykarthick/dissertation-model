@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     if mode == "train":
         # Check if the dataset for RoI training exists before proceeding
-        if not os.path.exists("dataset/yolo"):
+        if not os.path.exists("dataset/roi"):
             logger.error(
                 "Dataset does not exist for training, please download using data_setup.py before training.")
             sys.exit(1)
