@@ -41,7 +41,7 @@ def create_parser() -> ArgumentParser:
                         help='Enable weighted sampling for training data')
     parser.add_argument('--roi', action='store_true',
                         help="Use trained YOLO to detect the region before using it for classification.")
-    parser.add_argument('--roi_weight', type=str,
+    parser.add_argument('--roi_weight', type=str, default="weights/yolo/train/weights/best.pt",
                         help='File name of YOLO weight to use during pipeline.')
     parser.add_argument("--env", type=str, choices=["local", "cloud"], default="local",
                         help="Cloud mode has a special shutdown sequence to save resources.")
