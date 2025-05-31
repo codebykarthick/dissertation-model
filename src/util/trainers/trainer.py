@@ -125,7 +125,7 @@ class Trainer:
         Returns:
             bool: Returns True if it was saved, False otherwise for early stopping.
         """
-        if current_metric > best_metric and current_metric > 0 and (best_metric - current_metric) > self.delta:
+        if current_metric > best_metric and current_metric > 0 and (current_metric - best_metric) > self.delta:
             timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             model_file = f"{self.model_name}_fold{fold+1}_{timestamp}.pth"
 
