@@ -54,7 +54,7 @@ def create_parser() -> ArgumentParser:
 
 
 def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], args: Namespace):
-    if args.type not in valid_models.keys():
+    if args.task_type not in valid_models.keys():
         parser.error("--type can only be either classification or siamese.")
     if args.mode == 'export':
         if not args.file:
