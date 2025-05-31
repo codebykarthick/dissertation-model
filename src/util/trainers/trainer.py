@@ -42,8 +42,10 @@ class Trainer:
         self.delta = delta
 
         if roi:
-            self.roi = roi
+            self.roi = True
             self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
+        else:
+            self.roi = False
 
     def _apply_roi_and_crop(self, images):
         pil_images = [transforms.ToPILImage()(img.cpu()) for img in images]
@@ -74,8 +76,6 @@ class Trainer:
         Returns:
             tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
         """
-        print("classification" in task_type)
-        print(task_type)
         if "classification" in task_type:
             if name == "cnn":
                 model = LFD_CNN()
