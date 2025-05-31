@@ -74,6 +74,8 @@ class Trainer:
         Returns:
             tuple[torch.nn.Module, list[int]]: Returns the instance of the model along with the dimensions to be used.
         """
+        print("classification" in task_type)
+        print(task_type)
         if "classification" in task_type:
             if name == "cnn":
                 model = LFD_CNN()
