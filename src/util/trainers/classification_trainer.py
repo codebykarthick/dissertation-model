@@ -154,7 +154,7 @@ class ClassificationCrossValidationTrainer(Trainer):
                     val_labels_int, val_preds_bin))
 
                 self.log.info(
-                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | F1: {current_f1:.4f}")
+                    f"[Fold {fold + 1}] Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | F1 (Current): {current_f1:.4f} | F1 (Best): {best_f1:.4f}")
 
                 metrics = {
                     "model": self.model_name,
@@ -306,7 +306,7 @@ class ClassificationTrainer(Trainer):
 
             self.log.info(
                 f"Epoch {epoch}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | "
-                f"Val Loss: {metrics['val_loss']:.4f} | F1: {metrics['f1_score']:.4f}"
+                f"Val Loss: {metrics['val_loss']:.4f} | F1 (Current): {current_f1:.4f} | F1 (Best): {best_f1:.4f}"
             )
 
             # Save on improvement

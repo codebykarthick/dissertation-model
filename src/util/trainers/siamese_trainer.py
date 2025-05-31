@@ -144,7 +144,7 @@ class SiameseTrainer(Trainer):
             scheduler.step(metrics["val_loss"])
             self.log.info(
                 f"Epoch {epoch}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | "
-                f"Val Loss: {metrics['val_loss']:.4f} | F1: {metrics['f1_score']:.4f}"
+                f"Val Loss: {metrics['val_loss']:.4f} | F1 (Current): {current_f1:.4f} | F1 (Best): {best_f1:.4f}"
             )
 
             if self.evaluate_and_save(current_metric=current_f1, best_metric=best_f1, model=model, metrics=metrics):
