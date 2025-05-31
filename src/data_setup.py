@@ -48,7 +48,7 @@ def download_yolo_dataset():
     """
     data_dir = os.path.join(os.getcwd(), "dataset", "roi")
     _download(data_dir=data_dir,
-              download_url="https://drive.google.com/uc?id=1-IZtPuUnoGS9SAQ0r2r65ICAoYEXInxg")
+              download_url="https://drive.google.com/uc?id=1vMiqywMd-wlJOS8xYortG4aN69EHkNGZ")
 
 
 if __name__ == "__main__":
