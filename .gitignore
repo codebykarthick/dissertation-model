@@ -172,5 +172,4 @@ cython_debug/
 
 # Folders that are not necessary / too big to push
 dataset/
-weights/
 logs/
