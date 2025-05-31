@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import sys
@@ -111,8 +112,26 @@ class Trainer:
     def export(self):
         raise NotImplementedError("Export method must be overriden!")
 
+    def _cleanup_old_files(self, pattern: str, retain_last: int = 2):
+        if retain_last > 0:
+            all_files = sorted(
+                glob.glob(pattern),
+                key=os.path.getmtime,
+                reverse=True
+            )
+
+            if not all_files:
+                # No files to clean up
+                return
+
+            for old_file in all_files[retain_last:]:
+                try:
+                    os.remove(old_file)
+                except Exception as e:
+                    self.log.warning(f"Failed to delete {old_file}: {e}")
+
     def evaluate_and_save(self, current_metric: float, best_metric: float, model: torch.nn.Module,
-                          metrics: dict[str, float], fold: int = 0, save_model: bool = True) -> bool:
+                          metrics: dict[str, float], fold: int = 0, save_model: bool = True, retain_last: int = 2) -> bool:
         """Evaluate if it satifies conditions before saving the model and metrics results.
 
         Args:
@@ -135,7 +154,12 @@ class Trainer:
             filename = f"{self.model_name}_fold{fold+1}_{timestamp}_metrics.json"
             self.save_results(metrics=metrics, filename=filename)
             self.log.info(
-                f"Saved metrics for Fold {fold + 1} in: {filename}")
+                f"Saved metrics for Fold {fold + 1} in: {filename}, performing cleanup.")
+            self._cleanup_old_files(
+                pattern=f"weights/{self.model_name}/{self.model_name}_fold{fold+1}*.pth", retain_last=retain_last)
+            self._cleanup_old_files(
+                pattern=f"results/{self.model_name}_fold{fold+1}*.json", retain_last=retain_last)
+
             return True
         return False
 
