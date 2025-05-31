@@ -150,6 +150,10 @@ class ClassificationCrossValidationTrainer(Trainer):
                 # Compute f1 and use it for model checkpointing
                 val_preds_bin = [1 if p > 0.5 else 0 for p in val_preds]
                 val_labels_int = [int(l) for l in val_labels]
+
+                self.log.info(f"DEBUG: Labels: {val_labels_int}")
+                self.log.info(f"DEBUG: Preds: {val_preds_bin}")
+
                 current_f1 = cast(float, f1_score(
                     val_labels_int, val_preds_bin))
 
