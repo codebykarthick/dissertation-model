@@ -28,5 +28,7 @@ python runner.py --models cnn --mode evaluate --file cnn_2025-05-20_09-41-03_val
 ## With RoI
 ### Training Scripts
 
+# CLASSIFICATION - With Cross Validation
+nohup python runner.py --task_type classification_crossval --models mobilenetv3 --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 > out.log 2>&1 &
 
 # SIAMESE

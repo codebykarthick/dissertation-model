@@ -3,18 +3,16 @@ from typing import cast
 
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (accuracy_score, f1_score, precision_score,
+                             recall_score)
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
-from trainer import Trainer
 
 from util.constants import CONSTANTS
-from util.data_loader import (
-    SiameseDataset,
-    generate_eval_transforms,
-    generate_train_transforms,
-)
+from util.data_loader import (SiameseDataset, generate_eval_transforms,
+                              generate_train_transforms)
+from util.trainers.trainer import Trainer
 
 
 class SiameseTrainer(Trainer):
