@@ -1,0 +1,9 @@
+{
+    "model": "efficientnet",
+    "fold": 6,
+    "accuracy": 0.9310344827586207,
+    "precision": 0.8,
+    "recall": 0.8,
+    "f1_score": 0.8,
+    "val_loss": 0.5091677308082581
+}
