@@ -9,6 +9,9 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 from util.constants import CONSTANTS
+from util.logger import setup_logger
+
+log = setup_logger()
 
 
 class ResizeAndPad:
@@ -53,7 +56,7 @@ class ApplyCLAHE:
 
 
 class ClassificationDataset(Dataset):
-    def __init__(self, image_dir: str, defined_transforms=None):
+    def __init__(self, image_dir: str, roi_model: torch.nn.Module | None = None, defined_transforms=None, conf_threshold: float = 0.3):
         super().__init__()
         self.image_dir = os.path.join(image_dir, 'Images')
         self.label_file = os.path.join(image_dir, 'labels.csv')
@@ -63,6 +66,9 @@ class ClassificationDataset(Dataset):
         self.labels = pd.read_csv(self.label_file)
         self.label_map = dict(
             zip(self.labels['file_id'], self.labels['is_asp_fungi']))
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.roi_model = roi_model
+        self.conf_threshold = conf_threshold
 
     def __len__(self):
         return len(self.images)
@@ -72,6 +78,9 @@ class ClassificationDataset(Dataset):
         image = Image.open(img_path).convert("RGB")
         label = self.label_map[self.images[index]]
 
+        if self.roi_model is not None:
+            image = self._apply_roi_and_crop(image)
+
         if self.defined_transforms:
             image = self.defined_transforms(image)
 
@@ -80,9 +89,43 @@ class ClassificationDataset(Dataset):
     def set_transforms(self, defined_transforms):
         self.defined_transforms = defined_transforms
 
+    def _apply_roi_and_crop(self, image: Image.Image) -> Image.Image:
+        if self.roi_model is None:
+            log.warning("RoI model is not initialised! Skipping crop")
+            return image
+
+        # Run YOLO on the PIL image
+        results = self.roi_model(image, verbose=False)
+        result = results[0]
+        if not result.boxes:
+            # no boxes detected → return full strip
+            return image
+
+        # pick the box with highest confidence
+        boxes = result.boxes
+        confidences = boxes.conf.cpu()
+        best_idx = int(torch.argmax(confidences))
+        best_conf = float(confidences[best_idx])
+
+        # if top confidence is too low, skip cropping
+        if best_conf < self.conf_threshold:
+            return image
+
+        # otherwise, crop the strip
+        x1, y1, x2, y2 = boxes.xyxy[best_idx].cpu().numpy().astype(int)
+        return image.crop((x1, y1, x2, y2))
+
 
 class SiameseDataset(Dataset):
-    def __init__(self, image_dir: str, positive_anchors: list[str], negative_anchors: list[str], transform=None):
+    def __init__(
+        self,
+        image_dir: str,
+        positive_anchors: list[str],
+        negative_anchors: list[str],
+        transform=None,
+        roi_model: torch.nn.Module | None = None,
+        conf_threshold: float = 0.3
+    ):
         super().__init__()
         self.image_dir = os.path.join(image_dir, 'Images')
         self.label_file = os.path.join(image_dir, 'labels.csv')
@@ -90,6 +133,7 @@ class SiameseDataset(Dataset):
         self.label_map = dict(
             zip(self.labels_df['file_id'], self.labels_df['is_asp_fungi']))
         self.transform = transform
+        self.roi_model = roi_model
 
         self.image_list = sorted(os.listdir(self.image_dir))
         self.positive_anchors = [
@@ -98,6 +142,7 @@ class SiameseDataset(Dataset):
             img for img in negative_anchors if img in self.label_map]
 
         self.pairs = self._generate_pairs()
+        self.conf_threshold = conf_threshold
 
     def _generate_pairs(self):
         pairs = []
@@ -128,11 +173,41 @@ class SiameseDataset(Dataset):
         img2 = Image.open(os.path.join(
             self.image_dir, candidate_name)).convert("RGB")
 
+        if self.roi_model is not None:
+            img1 = self._apply_roi_and_crop(img1)
+            img2 = self._apply_roi_and_crop(img2)
+
         if self.transform:
             img1 = self.transform(img1)
             img2 = self.transform(img2)
 
         return img1, img2, torch.tensor(label, dtype=torch.float32)
+
+    def _apply_roi_and_crop(self, image: Image.Image) -> Image.Image:
+        if self.roi_model is None:
+            log.warning("RoI model is not initialised! Skipping crop")
+            return image
+
+        # Run YOLO on the PIL image
+        results = self.roi_model(image, verbose=False)
+        result = results[0]
+        if not result.boxes:
+            # no boxes detected → return full strip
+            return image
+
+        # pick the box with highest confidence
+        boxes = result.boxes
+        confidences = boxes.conf.cpu()
+        best_idx = int(torch.argmax(confidences))
+        best_conf = float(confidences[best_idx])
+
+        # if top confidence is too low, skip cropping
+        if best_conf < self.conf_threshold:
+            return image
+
+        # otherwise, crop the strip
+        x1, y1, x2, y2 = boxes.xyxy[best_idx].cpu().numpy().astype(int)
+        return image.crop((x1, y1, x2, y2))
 
 
 def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = False) -> transforms.Compose:
@@ -158,6 +233,8 @@ def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = Fal
         transforms.RandomAffine(degrees=10, translate=(0.05, 0.05), shear=5),
         transforms.ElasticTransform(alpha=50.0, sigma=5.0),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                             0.229, 0.224, 0.225]),
     ])
     return transform
 
@@ -176,5 +253,7 @@ def generate_eval_transforms(dimensions: list[int], fill_with_noise: bool = Fals
         ResizeAndPad(dimensions, fill_with_noise=fill_with_noise),
         ApplyCLAHE(),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                             0.229, 0.224, 0.225]),
     ])
     return transform

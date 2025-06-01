@@ -3,14 +3,16 @@ from typing import cast
 
 import numpy as np
 import torch
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score)
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 
-from util.data_loader import (ClassificationDataset, generate_eval_transforms,
-                              generate_train_transforms)
+from util.data_loader import (
+    ClassificationDataset,
+    generate_eval_transforms,
+    generate_train_transforms,
+)
 from util.trainers.trainer import Trainer
 
 
@@ -28,7 +30,8 @@ class ClassificationCrossValidationTrainer(Trainer):
                          label=label, delta=delta)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
-        self.dataset = ClassificationDataset(image_dir)
+        self.dataset = ClassificationDataset(
+            image_dir, roi_model=self.roi_model)
 
     def train(self):
         """Training using k-fold cross validation to ensure equal training in all folds."""
@@ -109,10 +112,7 @@ class ClassificationCrossValidationTrainer(Trainer):
                 model.train()
                 total_loss = 0.0
                 for images, labels in tqdm(train_loader, desc=f'Epoch {epoch+1}/{self.epochs}', leave=False):
-                    if self.roi:
-                        images = self._apply_roi_and_crop(images)
-                    else:
-                        images = images.to(self.device)
+                    images = images.to(self.device)
                     labels = labels.to(self.device)
 
                     optimizer.zero_grad()
@@ -131,10 +131,7 @@ class ClassificationCrossValidationTrainer(Trainer):
                 total_val_loss = 0.0
                 with torch.no_grad():
                     for images, labels in val_loader:
-                        if self.roi:
-                            images = self._apply_roi_and_crop(images)
-                        else:
-                            images = images.to(self.device)
+                        images = images.to(self.device)
                         labels = labels.to(self.device)
                         outputs = model(images)
                         val_loss = criterion(
@@ -191,7 +188,7 @@ class ClassificationTrainer(Trainer):
                          label=label, delta=delta)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
-        dataset = ClassificationDataset(image_dir)
+        dataset = ClassificationDataset(image_dir, roi_model=self.roi_model)
         self.model, self.dimensions = self.create_model_from_name(
             self.model_name, self.task_type)
 
@@ -288,10 +285,7 @@ class ClassificationTrainer(Trainer):
             model.train()
             total_loss = 0.0
             for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', leave=False):
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
+                images = images.to(self.device)
                 labels = labels.to(self.device)
 
                 optimizer.zero_grad()
@@ -337,10 +331,7 @@ class ClassificationTrainer(Trainer):
         total_val_loss = 0.0
         with torch.no_grad():
             for images, labels in self.val_loader:
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
+                images = images.to(self.device)
                 labels = labels.to(self.device)
 
                 outputs = model(images)
@@ -378,10 +369,7 @@ class ClassificationTrainer(Trainer):
         test_preds, test_labels = [], []
         with torch.no_grad():
             for images, labels in self.test_loader:
-                if self.roi:
-                    images = self._apply_roi_and_crop(images)
-                else:
-                    images = images.to(self.device)
+                images = images.to(self.device)
                 labels = labels.to(self.device)
 
                 outputs = model(images)

@@ -3,15 +3,17 @@ from typing import cast
 
 import numpy as np
 import torch
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score)
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 
 from util.constants import CONSTANTS
-from util.data_loader import (SiameseDataset, generate_eval_transforms,
-                              generate_train_transforms)
+from util.data_loader import (
+    SiameseDataset,
+    generate_eval_transforms,
+    generate_train_transforms,
+)
 from util.trainers.trainer import Trainer
 
 
@@ -27,7 +29,7 @@ class SiameseTrainer(Trainer):
         negative_anchors = CONSTANTS["siamese"]["negative_anchors"]
         dataset = SiameseDataset(
             image_dir=image_dir, positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors)
+            negative_anchors=negative_anchors, roi_model=self.roi_model)
         # Prepare indices and labels for splitting siamese pairs
         all_indices = list(range(len(dataset)))
         all_labels = [label for _, _, label in dataset.pairs]
@@ -123,12 +125,8 @@ class SiameseTrainer(Trainer):
             model.train()
             total_loss = 0.0
             for img1, img2, label in tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', leave=False):
-                if self.roi:
-                    img1 = self._apply_roi_and_crop(img1)
-                    img2 = self._apply_roi_and_crop(img2)
-                else:
-                    img1 = img1.to(self.device)
-                    img2 = img2.to(self.device)
+                img1 = img1.to(self.device)
+                img2 = img2.to(self.device)
                 label = label.to(self.device)
 
                 optimizer.zero_grad()
@@ -169,12 +167,8 @@ class SiameseTrainer(Trainer):
         criterion = torch.nn.BCEWithLogitsLoss()
         with torch.no_grad():
             for img1, img2, label in tqdm(self.val_loader, desc="Validation", leave=False):
-                if self.roi:
-                    img1 = self._apply_roi_and_crop(img1)
-                    img2 = self._apply_roi_and_crop(img2)
-                else:
-                    img1 = img1.to(self.device)
-                    img2 = img2.to(self.device)
+                img1 = img1.to(self.device)
+                img2 = img2.to(self.device)
                 label = label.to(self.device)
 
                 outputs = model(img1, img2)
@@ -211,12 +205,8 @@ class SiameseTrainer(Trainer):
         all_preds, all_labels = [], []
         with torch.no_grad():
             for img1, img2, label in tqdm(self.test_loader, desc="Evaluation", leave=False):
-                if self.roi:
-                    img1 = self._apply_roi_and_crop(img1)
-                    img2 = self._apply_roi_and_crop(img2)
-                else:
-                    img1 = img1.to(self.device)
-                    img2 = img2.to(self.device)
+                img1 = img1.to(self.device)
+                img2 = img2.to(self.device)
 
                 outputs = model(img1, img2)
                 probs = torch.sigmoid(outputs.view(-1)).cpu().numpy()

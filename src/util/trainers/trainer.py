@@ -44,30 +44,11 @@ class Trainer:
         self.patience = patience
         self.delta = delta
         self.label = label
+        self.roi_model = None
 
         if roi:
-            self.roi = True
-            self.roi_model = YOLO(os.path.join("weights", "yolo", roi_weight))
-        else:
-            self.roi = False
-
-    def _apply_roi_and_crop(self, images):
-        pil_images = [transforms.ToPILImage()(img.cpu()) for img in images]
-        results = self.roi_model(pil_images, verbose=False)
-        cropped_images = []
-
-        for img_pil, img_tensor, result in zip(pil_images, images, results):
-            if result.boxes:
-                box = result.boxes.xyxy[0].cpu().numpy().astype(int)
-                x1, y1, x2, y2 = box
-                cropped = img_pil.crop((x1, y1, x2, y2))
-                resized = ResizeAndPad(
-                    (img_tensor.shape[2], img_tensor.shape[1]), self.fill_noise)(cropped)
-                cropped_images.append(transforms.ToTensor()(resized))
-            else:
-                cropped_images.append(img_tensor)
-
-        return torch.stack(cropped_images).to(self.device)
+            self.roi_model = YOLO(os.path.join(
+                "weights", "yolo", roi_weight)).to(self.device).eval()
 
     def create_model_from_name(self, name: str, task_type: str) -> tuple[torch.nn.Module, list[int]]:
         """Create the model instance from the name of the model specified. Halts execution
