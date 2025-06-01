@@ -49,7 +49,7 @@ class Trainer:
         if roi:
             # Keep YOLO in CPU mode to prevent issues with CUDA in fork
             self.roi_model = YOLO(os.path.join(
-                "weights", "yolo", roi_weight)).eval()
+                "weights", "yolo", roi_weight)).to("cpu").eval()
 
     def create_model_from_name(self, name: str, task_type: str) -> tuple[torch.nn.Module, list[int]]:
         """Create the model instance from the name of the model specified. Halts execution
