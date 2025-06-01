@@ -5,7 +5,7 @@ import torchvision.models as models
 from torchvision import models
 from torchvision.models import (
     EfficientNet,
-    EfficientNet_B7_Weights,
+    EfficientNet_B0_Weights,
     MobileNetV3,
     ShuffleNet_V2_X1_0_Weights,
     ShuffleNetV2,
@@ -62,7 +62,7 @@ def get_efficientnet_tuned(dropout_rate=0.3, hidden_units=256) -> EfficientNet:
     """
 
     # Load a pretrained EfficientNet-B7 model
-    model = models.efficientnet_b7(weights=EfficientNet_B7_Weights.DEFAULT)
+    model = models.efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
 
     # Freeze the feature extraction layers
     for param in model.features.parameters():
