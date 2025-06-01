@@ -1,0 +1,9 @@
+{
+    "model": "cnn",
+    "fold": 1,
+    "accuracy": 0.7,
+    "precision": 0.4,
+    "recall": 1.0,
+    "f1_score": 0.5714285714285714,
+    "val_loss": 1.0207146406173706
+}
