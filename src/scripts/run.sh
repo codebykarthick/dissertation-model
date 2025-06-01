@@ -11,7 +11,7 @@ python roi_runner.py --mode train --batch 24
 ### Training scripts
 #### No Oversampling and No loss weighting
 nohup python runner.py --task_type classification --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 > out.log 2>&1 &
-python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 
+python runner.py --task_type classification --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 
 
 #### With loss weighting
 python runner.py --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10  --weighted_loss

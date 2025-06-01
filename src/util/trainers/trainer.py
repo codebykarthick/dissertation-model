@@ -9,9 +9,11 @@ from torchvision import transforms
 from ultralytics import YOLO
 
 from models.classification.lfd_cnn import LFD_CNN
-from models.classification.pretrained_models import (get_efficientnet_tuned,
-                                                     get_mobilenetv3_tuned,
-                                                     get_shufflenet_tuned)
+from models.classification.pretrained_models import (
+    get_efficientnet_tuned,
+    get_mobilenetv3_tuned,
+    get_shufflenet_tuned,
+)
 from models.siamese.mobilenet import SiameseMobileNet
 from util.constants import CONSTANTS
 from util.data_loader import ResizeAndPad
@@ -121,6 +123,8 @@ class Trainer:
                 reverse=True
             )
 
+            self.log.info(f"Found {len(all_files)} to clean up in folder.")
+
             if not all_files:
                 # No files to clean up
                 return
@@ -188,7 +192,7 @@ class Trainer:
         Args:
             filename (str, optional): The filename to save as. Defaults to "sample.json".
         """
-        results_dir = os.path.join(os.getcwd(), self.label, "results")
+        results_dir = os.path.join(os.getcwd(), "results", self.label)
         os.makedirs(results_dir, exist_ok=True)
         result_file = os.path.join(
             results_dir, filename)
