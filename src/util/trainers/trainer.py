@@ -123,11 +123,12 @@ class Trainer:
                 reverse=True
             )
 
-            self.log.info(f"Found {len(all_files)} to clean up in folder.")
-
             if not all_files:
                 # No files to clean up
                 return
+
+            self.log.info(
+                f"Found {len(all_files) - retain_last} files to clean up in folder.")
 
             for old_file in all_files[retain_last:]:
                 try:
