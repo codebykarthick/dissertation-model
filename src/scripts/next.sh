@@ -1,6 +1,11 @@
-# List of experiments to perform for the next run
+#!/bin/sh
+# Starting directory
+echo "Working directory: $(pwd)"
+
+# Downloading data
 python data_setup.py classification
 
+# List of experiments to perform for the next run
 # Cross Val Baseline
 python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
 python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
