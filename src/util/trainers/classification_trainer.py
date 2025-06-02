@@ -81,7 +81,7 @@ class ClassificationCrossValidationTrainer(Trainer):
                         num_samples=len(sample_weights),
                         replacement=True
                     )
-                else:
+                if self.is_loss_weighted:
                     pos_weight = torch.tensor(
                         class_weights[1] / class_weights[0], device=self.device)
                     criterion = torch.nn.BCEWithLogitsLoss(
@@ -237,7 +237,7 @@ class ClassificationTrainer(Trainer):
                     num_samples=len(sample_weights),
                     replacement=True
                 )
-            else:
+            if self.is_loss_weighted:
                 pos_weight = torch.tensor(
                     class_weights[1] / class_weights[0], device=self.device)
                 criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)

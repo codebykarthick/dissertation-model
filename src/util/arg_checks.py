@@ -62,10 +62,6 @@ def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], ar
         if not args.file:
             parser.error(
                 '--file has to be specified when the mode is evaluate or export')
-    if args.weighted_loss == True:
-        if args.weighted_sampling == True:
-            parser.error(
-                'Either one of weighted loss or weighted sampling can be set True at a time.')
     if args.roi == True:
         if not args.roi_weight:
             parser.error(
