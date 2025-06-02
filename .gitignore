@@ -175,3 +175,5 @@ dataset/
 logs/
 # Downloaded as part of YOLO's check can be ignored.
 **/yolo11n.pt
+# Nohup output.
+out.log
