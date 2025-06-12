@@ -3,6 +3,7 @@ from typing import cast
 
 import numpy as np
 import torch
+import torch.multiprocessing as mp
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -30,26 +31,31 @@ class ClassificationCrossValidationTrainer(Trainer):
                          label=label, delta=delta)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
-        self.dataset = ClassificationDataset(
-            image_dir, roi_model=self.roi_model)
+        self.image_dir = image_dir
 
     def train(self):
         """Training using k-fold cross validation to ensure equal training in all folds."""
         self.log.info(f"Starting {self.k}-Fold Cross Validation training")
         kf = StratifiedKFold(n_splits=self.k, shuffle=True, random_state=42)
-        # Prepare label array for stratification
-        labels_array = np.array([self.dataset.label_map[img]
-                                for img in self.dataset.images])
+        # Load base dataset for stratification
+        base_dataset = ClassificationDataset(
+            self.image_dir, roi_model=self.roi_model)
+        labels_array = np.array([base_dataset.label_map[img]
+                                for img in base_dataset.images])
 
         for fold, (train_idx, val_idx) in enumerate(
-            kf.split(X=np.zeros(len(self.dataset)), y=labels_array)
+            kf.split(X=np.zeros(len(base_dataset)), y=labels_array)
         ):
             self.log.info(
                 f"Fold {fold + 1}/{self.k} --------------------------")
 
-            # Subset datasets
-            train_subset = torch.utils.data.Subset(self.dataset, train_idx)
-            val_subset = torch.utils.data.Subset(self.dataset, val_idx)
+            # Instantiate separate dataset instances for this fold
+            train_dataset = ClassificationDataset(
+                self.image_dir, roi_model=self.roi_model)
+            val_dataset = ClassificationDataset(
+                self.image_dir, roi_model=self.roi_model)
+            train_subset = torch.utils.data.Subset(train_dataset, train_idx)
+            val_subset = torch.utils.data.Subset(val_dataset, val_idx)
 
             # New model instance per fold
             model, dimensions = self.create_model_from_name(
@@ -68,14 +74,13 @@ class ClassificationCrossValidationTrainer(Trainer):
             criterion = torch.nn.BCEWithLogitsLoss()
 
             if self.is_sampling_weighted or self.is_loss_weighted:
-                # assuming dataset[i] -> (img, label)
-                labels = np.array([self.dataset[i][1] for i in train_idx])
-                class_counts = np.bincount(labels)
-                # weight for each class = 1 / count
-                class_weights = 1. / class_counts
-                sample_weights = class_weights[labels]
+                # Compute class weights from labels_array for this fold
+                train_labels_fold = labels_array[train_idx]
+                class_counts = np.bincount(train_labels_fold)
+                class_weights = 1.0 / class_counts
 
                 if self.is_sampling_weighted:
+                    sample_weights = class_weights[train_labels_fold]
                     sampler = WeightedRandomSampler(
                         weights=cast(list[float], sample_weights.tolist()),
                         num_samples=len(sample_weights),
@@ -83,7 +88,8 @@ class ClassificationCrossValidationTrainer(Trainer):
                     )
                 if self.is_loss_weighted:
                     pos_weight = torch.tensor(
-                        class_weights[1] / class_weights[0], device=self.device)
+                        class_weights[1] / class_weights[0], device=self.device
+                    )
                     criterion = torch.nn.BCEWithLogitsLoss(
                         pos_weight=pos_weight)
 
@@ -98,7 +104,7 @@ class ClassificationCrossValidationTrainer(Trainer):
             )
             val_loader = DataLoader(
                 val_subset, batch_size=self.batch_size, shuffle=False,
-                num_workers=self.num_workers, pin_memory=True
+                num_workers=0, pin_memory=True
             )
 
             optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
@@ -180,22 +186,24 @@ class ClassificationCrossValidationTrainer(Trainer):
 class ClassificationTrainer(Trainer):
     def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
                  is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
-                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02):
+                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02, filename=""):
         super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
                          num_workers=num_workers, roi_weight=roi_weight, k=k,
                          is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
                          epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
-                         label=label, delta=delta)
+                         label=label, delta=delta, filename=filename)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
-        dataset = ClassificationDataset(image_dir, roi_model=self.roi_model)
+        self.image_dir = image_dir
+        base_dataset = ClassificationDataset(
+            self.image_dir, roi_model=self.roi_model)
         self.model, self.dimensions = self.create_model_from_name(
             self.model_name, self.task_type)
 
         # Stratified 80/10/10 split of indices
-        all_indices = np.arange(len(dataset))
-        all_labels = np.array([dataset.label_map[img]
-                              for img in dataset.images])
+        all_indices = np.arange(len(base_dataset))
+        all_labels = np.array([base_dataset.label_map[img]
+                              for img in base_dataset.images])
 
         # 80% train, 20% temp
         train_idx, temp_idx, _, y_temp = train_test_split(
@@ -206,10 +214,16 @@ class ClassificationTrainer(Trainer):
             temp_idx, y_temp, test_size=0.5, stratify=y_temp, random_state=42
         )
 
-        # Create subsets
-        train_subset = torch.utils.data.Subset(dataset, train_idx)
-        val_subset = torch.utils.data.Subset(dataset, val_idx)
-        test_subset = torch.utils.data.Subset(dataset, test_idx)
+        # Instantiate separate dataset instances for splits
+        train_dataset = ClassificationDataset(
+            self.image_dir, roi_model=self.roi_model)
+        val_dataset = ClassificationDataset(
+            self.image_dir, roi_model=self.roi_model)
+        test_dataset = ClassificationDataset(
+            self.image_dir, roi_model=self.roi_model)
+        train_subset = torch.utils.data.Subset(train_dataset, train_idx)
+        val_subset = torch.utils.data.Subset(val_dataset, val_idx)
+        test_subset = torch.utils.data.Subset(test_dataset, test_idx)
 
         # Assign transforms
         cast(ClassificationDataset, train_subset.dataset).defined_transforms = generate_train_transforms(
@@ -227,11 +241,13 @@ class ClassificationTrainer(Trainer):
         criterion = torch.nn.BCEWithLogitsLoss()
 
         if self.is_sampling_weighted or self.is_loss_weighted:
-            train_labels = np.array([dataset[i][1] for i in train_idx])
-            class_counts = np.bincount(train_labels)
-            class_weights = 1. / class_counts
-            sample_weights = class_weights[train_labels]
+            # Compute class weights from base labels for train split
+            train_labels_fold = all_labels[train_idx]
+            class_counts = np.bincount(train_labels_fold)
+            class_weights = 1.0 / class_counts
+
             if self.is_sampling_weighted:
+                sample_weights = class_weights[train_labels_fold]
                 sampler = WeightedRandomSampler(
                     weights=cast(list[float], sample_weights.tolist()),
                     num_samples=len(sample_weights),
@@ -239,7 +255,8 @@ class ClassificationTrainer(Trainer):
                 )
             if self.is_loss_weighted:
                 pos_weight = torch.tensor(
-                    class_weights[1] / class_weights[0], device=self.device)
+                    class_weights[1] / class_weights[0], device=self.device
+                )
                 criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         # DataLoaders
@@ -255,14 +272,14 @@ class ClassificationTrainer(Trainer):
             val_subset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=0,
             pin_memory=True
         )
         self.test_loader = DataLoader(
             test_subset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=0,
             pin_memory=True
         )
         self.criterion = criterion
@@ -298,7 +315,7 @@ class ClassificationTrainer(Trainer):
             avg_train_loss = total_loss / len(self.train_loader)
 
             # Validation
-            current_f1, metrics = self.validate()
+            current_f1, metrics = self.validate(model)
             scheduler.step(metrics["val_loss"])
 
             self.log.info(
@@ -318,13 +335,8 @@ class ClassificationTrainer(Trainer):
                     self.log.info(f"Early stopping at epoch {epoch}")
                     break
 
-    def validate(self) -> tuple[float, dict]:
+    def validate(self, model) -> tuple[float, dict]:
         """Run validation and return F1 and metric dict."""
-        model = getattr(self, "model", None) or None
-        if model is None:
-            model, _ = self.create_model_from_name(
-                self.model_name, self.task_type)
-            model = model.to(self.device)
         model.eval()
 
         val_preds, val_labels = [], []
@@ -360,10 +372,8 @@ class ClassificationTrainer(Trainer):
     def evaluate(self):
         """Final evaluation on the test set."""
         self.log.info("Evaluating on test set")
-        model = getattr(self, "model", None) or None
-        if model is None:
-            self.log.warning("Model not found for evaluation")
-            return
+        model, _ = self.create_model_from_name(self.model_name, self.task_type)
+        self.load_model(model, self.filename)
 
         model.eval()
         test_preds, test_labels = [], []

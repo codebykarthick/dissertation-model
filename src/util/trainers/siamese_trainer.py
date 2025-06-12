@@ -20,19 +20,25 @@ from util.trainers.trainer import Trainer
 class SiameseTrainer(Trainer):
     def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
                  is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
-                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = ""):
+                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta: float = 0.02, filename=""):
         super().__init__(roi, fill_noise, model_name, num_workers, k, is_sampling_weighted,
-                         is_loss_weighted, batch_size, epochs, task_type, lr, patience, label, roi_weight)
+                         is_loss_weighted, batch_size, epochs, task_type, lr, patience, label, roi_weight,
+                         delta, filename)
 
         image_dir = os.path.join(os.getcwd(), "dataset")
+        self.image_dir = image_dir
         positive_anchors = CONSTANTS["siamese"]["positive_anchors"]
         negative_anchors = CONSTANTS["siamese"]["negative_anchors"]
-        dataset = SiameseDataset(
-            image_dir=image_dir, positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors, roi_model=self.roi_model)
+        # Base dataset for stratification
+        base_dataset = SiameseDataset(
+            image_dir=self.image_dir,
+            positive_anchors=positive_anchors,
+            negative_anchors=negative_anchors,
+            roi_model=self.roi_model
+        )
         # Prepare indices and labels for splitting siamese pairs
-        all_indices = list(range(len(dataset)))
-        all_labels = [label for _, _, label in dataset.pairs]
+        all_indices = list(range(len(base_dataset)))
+        all_labels = [label for _, _, label in base_dataset.pairs]
 
         # Prepare model and create data loaders
         self.model, self.dimensions = self.create_model_from_name(
@@ -47,10 +53,28 @@ class SiameseTrainer(Trainer):
             temp_idx, temp_labels, test_size=0.5, stratify=temp_labels, random_state=42
         )
 
-        # Create subsets
-        train_subset = torch.utils.data.Subset(dataset, train_idx)
-        val_subset = torch.utils.data.Subset(dataset, val_idx)
-        test_subset = torch.utils.data.Subset(dataset, test_idx)
+        # Instantiate separate dataset instances for splits
+        train_dataset = SiameseDataset(
+            image_dir=self.image_dir,
+            positive_anchors=positive_anchors,
+            negative_anchors=negative_anchors,
+            roi_model=self.roi_model
+        )
+        val_dataset = SiameseDataset(
+            image_dir=self.image_dir,
+            positive_anchors=positive_anchors,
+            negative_anchors=negative_anchors,
+            roi_model=self.roi_model
+        )
+        test_dataset = SiameseDataset(
+            image_dir=self.image_dir,
+            positive_anchors=positive_anchors,
+            negative_anchors=negative_anchors,
+            roi_model=self.roi_model
+        )
+        train_subset = torch.utils.data.Subset(train_dataset, train_idx)
+        val_subset = torch.utils.data.Subset(val_dataset, val_idx)
+        test_subset = torch.utils.data.Subset(test_dataset, test_idx)
 
         # Assign transforms
         cast(SiameseDataset, train_subset.dataset).transform = generate_train_transforms(
@@ -68,11 +92,13 @@ class SiameseTrainer(Trainer):
         criterion = torch.nn.BCEWithLogitsLoss()
 
         if self.is_sampling_weighted or self.is_loss_weighted:
-            train_labels = np.array([dataset.pairs[i][2] for i in train_idx])
-            class_counts = np.bincount(train_labels)
-            class_weights = 1. / class_counts
-            sample_weights = class_weights[train_labels]
+            # Compute class weights from base labels for train split
+            train_labels_fold = np.array(all_labels)[train_idx]
+            class_counts = np.bincount(train_labels_fold)
+            class_weights = 1.0 / class_counts
+
             if self.is_sampling_weighted:
+                sample_weights = class_weights[train_labels_fold]
                 sampler = WeightedRandomSampler(
                     weights=cast(list[float], sample_weights.tolist()),
                     num_samples=len(sample_weights),
@@ -80,7 +106,8 @@ class SiameseTrainer(Trainer):
                 )
             if self.is_loss_weighted:
                 pos_weight = torch.tensor(
-                    class_weights[1] / class_weights[0], device=self.device)
+                    class_weights[1] / class_weights[0], device=self.device
+                )
                 criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         # DataLoaders
@@ -96,14 +123,14 @@ class SiameseTrainer(Trainer):
             val_subset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=0,
             pin_memory=True
         )
         self.test_loader = DataLoader(
             test_subset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=0,
             pin_memory=True
         )
         self.criterion = criterion
@@ -113,7 +140,6 @@ class SiameseTrainer(Trainer):
         self.log.info("Starting Siamese few-shot classification training")
         model, _ = self.create_model_from_name(self.model_name, self.task_type)
         model = model.to(self.device)
-        criterion = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode='min', factor=0.5, patience=3
@@ -131,14 +157,15 @@ class SiameseTrainer(Trainer):
 
                 optimizer.zero_grad()
                 outputs = model(img1, img2)
-                loss = criterion(outputs.view(-1), label)
+                logits = -outputs.view(-1)
+                loss = self.criterion(logits, label)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
 
             avg_train_loss = total_loss / len(self.train_loader)
             # Validation
-            current_f1, metrics = self.validate()
+            current_f1, metrics = self.validate(model)
             scheduler.step(metrics["val_loss"])
             self.log.info(
                 f"Epoch {epoch}/{self.epochs} | Train Loss: {avg_train_loss:.4f} | "
@@ -154,17 +181,12 @@ class SiameseTrainer(Trainer):
                     self.log.info(f"Early stopping at epoch {epoch}")
                     break
 
-    def validate(self) -> tuple[float, dict]:
+    def validate(self, model: torch.nn.Module) -> tuple[float, dict]:
         """Run validation on Siamese pairs and return F1 and metric dict."""
-        model = getattr(self, "model", None)
-        if model is None:
-            model, _ = self.create_model_from_name(
-                self.model_name, self.task_type)
-            model = model.to(self.device)
         model.eval()
         all_preds, all_labels = [], []
         total_val_loss = 0.0
-        criterion = torch.nn.BCEWithLogitsLoss()
+
         with torch.no_grad():
             for img1, img2, label in tqdm(self.val_loader, desc="Validation", leave=False):
                 img1 = img1.to(self.device)
@@ -172,10 +194,11 @@ class SiameseTrainer(Trainer):
                 label = label.to(self.device)
 
                 outputs = model(img1, img2)
-                val_loss = criterion(outputs.view(-1), label)
+                logits = -outputs.view(-1)
+                val_loss = self.criterion(logits, label)
                 total_val_loss += val_loss.item()
 
-                probs = torch.sigmoid(outputs.view(-1)).cpu().numpy()
+                probs = torch.sigmoid(-outputs.view(-1)).cpu().numpy()
                 preds = [1 if p > 0.5 else 0 for p in probs]
                 all_preds.extend(preds)
                 all_labels.extend(label.cpu().numpy().tolist())
@@ -197,7 +220,9 @@ class SiameseTrainer(Trainer):
     def evaluate(self):
         """Final evaluation on the evaluation set."""
         self.log.info("Evaluating Siamese few-shot model on evaluation set")
-        model = getattr(self, "model", None)
+        model, _ = self.create_model_from_name(self.model_name, self.task_type)
+        self.load_model(model, self.filename)
+
         if model is None:
             self.log.warning("Model not found for evaluation")
             return
@@ -209,7 +234,7 @@ class SiameseTrainer(Trainer):
                 img2 = img2.to(self.device)
 
                 outputs = model(img1, img2)
-                probs = torch.sigmoid(outputs.view(-1)).cpu().numpy()
+                probs = torch.sigmoid(-outputs.view(-1)).cpu().numpy()
                 preds = [1 if p > 0.5 else 0 for p in probs]
                 all_preds.extend(preds)
                 all_labels.extend(label.numpy().tolist())

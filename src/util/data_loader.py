@@ -141,6 +141,10 @@ class SiameseDataset(Dataset):
         self.negative_anchors = [
             img for img in negative_anchors if img in self.label_map]
 
+        # Quick sanity assertion
+        assert len(self.positive_anchors) == len(positive_anchors)
+        assert len(self.negative_anchors) == len(negative_anchors)
+
         self.pairs = self._generate_pairs()
         self.conf_threshold = conf_threshold
 

@@ -5,7 +5,6 @@ import sys
 from datetime import datetime
 
 import torch
-from torchvision import transforms
 from ultralytics import YOLO
 
 from models.classification.lfd_cnn import LFD_CNN
@@ -14,9 +13,8 @@ from models.classification.pretrained_models import (
     get_mobilenetv3_tuned,
     get_shufflenet_tuned,
 )
-from models.siamese.mobilenet import SiameseMobileNet
+from models.siamese.shufflenet import SiameseShuffleNet
 from util.constants import CONSTANTS
-from util.data_loader import ResizeAndPad
 from util.logger import setup_logger
 
 
@@ -27,7 +25,7 @@ class Trainer:
     def __init__(self, roi: bool, fill_noise: bool, model_name: str,
                  num_workers: int, k: int, is_sampling_weighted: bool, is_loss_weighted: bool,
                  batch_size: int, epochs: int, task_type: str, lr: float, patience: int,
-                 label: str, roi_weight: str = "", delta=0.02):
+                 label: str, roi_weight: str = "", delta=0.02, filename: str = ""):
         self.log = setup_logger()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
@@ -45,11 +43,12 @@ class Trainer:
         self.delta = delta
         self.label = label
         self.roi_model = None
+        self.filename = filename
 
         if roi:
             # Keep YOLO in CPU mode to prevent issues with CUDA in fork
             self.roi_model = YOLO(os.path.join(
-                "weights", "yolo", roi_weight)).to("cpu").eval()
+                "weights", "yolo", roi_weight)).eval()
 
     def create_model_from_name(self, name: str, task_type: str) -> tuple[torch.nn.Module, list[int]]:
         """Create the model instance from the name of the model specified. Halts execution
@@ -75,8 +74,8 @@ class Trainer:
                 self.log.error(f"{name} is not a valid model.")
                 sys.exit(1)
         elif task_type == "siamese":
-            if name == "mobilenetv3":
-                model = SiameseMobileNet()
+            if name == "shufflenet":
+                model = SiameseShuffleNet()
             else:
                 self.log.error(f"{name} is not a valid model.")
                 sys.exit(1)
@@ -151,7 +150,7 @@ class Trainer:
             return True
         return False
 
-    def save_model(self, model: torch.nn.Module, filename="sample.pth"):
+    def save_model(self, model: torch.nn.Module, filename: str = "sample.pth"):
         """Save the model weights as a pth file in weights/ directory
 
         Args:
@@ -181,3 +180,12 @@ class Trainer:
             results_dir, filename)
         with open(result_file, "w") as f:
             json.dump(metrics, f, indent=4)
+
+    def load_model(self, model: torch.nn.Module, filename: str = "sample.pth"):
+        model_weights_dir = os.path.join(
+            os.getcwd(), CONSTANTS["weights_path"], self.label, self.model_name)
+
+        model_filepath = os.path.join(model_weights_dir, filename)
+
+        model.load_state_dict(torch.load(model_filepath))
+        self.log.info(f"Model loaded from: {model_filepath}")
