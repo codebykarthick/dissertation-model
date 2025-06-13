@@ -1,4 +1,5 @@
 import os
+import random
 
 import cv2
 import numpy as np
@@ -197,7 +198,14 @@ class SiameseDataset(Dataset):
             img2 = self._apply_roi_and_crop(img2)
 
         if self.transform:
+            # Use a shared seed so both images get the same random augmentations
+            seed = np.random.randint(0, 2**32 - 1)
+            random.seed(seed)
+            torch.manual_seed(seed)
             img1 = self.transform(img1)
+
+            random.seed(seed)
+            torch.manual_seed(seed)
             img2 = self.transform(img2)
 
         return img1, img2, torch.tensor(label, dtype=torch.float32)
