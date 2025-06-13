@@ -58,7 +58,7 @@ class ApplyCLAHE:
 
 
 class ClassificationDataset(Dataset):
-    def __init__(self, image_dir: str, roi_weight: str = "", defined_transforms=None, conf_threshold: float = 0.3):
+    def __init__(self, image_dir: str, roi_enabled: bool, roi_weight: str = "", defined_transforms=None, conf_threshold: float = 0.3):
         super().__init__()
         self.image_dir = os.path.join(image_dir, 'Images')
         self.label_file = os.path.join(image_dir, 'labels.csv')
@@ -71,6 +71,7 @@ class ClassificationDataset(Dataset):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.roi_weight = roi_weight
         self.conf_threshold = conf_threshold
+        self.roi = roi_enabled
         self.roi_model = None
 
     def __len__(self):
@@ -94,7 +95,7 @@ class ClassificationDataset(Dataset):
         self.defined_transforms = defined_transforms
 
     def _create_roi_model(self):
-        if self.roi_weight != "" and not self.roi_model:
+        if self.roi and self.roi_weight != "" and not self.roi_model:
             self.roi_model = YOLO(os.path.join(
                 "weights", "yolo", self.roi_weight)).eval()
 
@@ -131,6 +132,7 @@ class SiameseDataset(Dataset):
         image_dir: str,
         positive_anchors: list[str],
         negative_anchors: list[str],
+        roi_enabled: bool,
         transform=None,
         roi_weight: str = "",
         conf_threshold: float = 0.3
@@ -142,6 +144,7 @@ class SiameseDataset(Dataset):
         self.label_map = dict(
             zip(self.labels_df['file_id'], self.labels_df['is_asp_fungi']))
         self.transform = transform
+        self.roi = roi_enabled
         self.roi_model = None
         self.roi_weight = roi_weight
 
@@ -178,7 +181,7 @@ class SiameseDataset(Dataset):
         return pairs
 
     def _create_roi_model(self):
-        if self.roi_weight != "" and not self.roi_model:
+        if self.roi and self.roi_weight != "" and not self.roi_model:
             self.roi_model = YOLO(os.path.join(
                 "weights", "yolo", self.roi_weight)).eval()
 

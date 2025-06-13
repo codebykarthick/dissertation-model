@@ -1,6 +1,8 @@
 import os
 import sys
 
+import torch.multiprocessing as mp
+
 from util.arg_checks import create_parser, validate_args
 from util.logger import setup_logger
 from util.trainers.classification_trainer import (
@@ -48,6 +50,8 @@ class Runner:
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
+
     valid_models = {
         "classification": ["mobilenetv3", "cnn", "efficientnet", "shufflenet"],
         "classification_crossval": ["mobilenetv3", "cnn", "efficientnet", "shufflenet"],

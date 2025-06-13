@@ -32,6 +32,7 @@ class SiameseTrainer(Trainer):
         # Base dataset for stratification
         base_dataset = SiameseDataset(
             image_dir=self.image_dir,
+            roi_enabled=roi,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
             roi_weight=self.roi_weight
@@ -58,18 +59,21 @@ class SiameseTrainer(Trainer):
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
+            roi_enabled=roi,
             roi_weight=self.roi_weight
         )
         val_dataset = SiameseDataset(
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
+            roi_enabled=roi,
             roi_weight=self.roi_weight
         )
         test_dataset = SiameseDataset(
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
+            roi_enabled=roi,
             roi_weight=self.roi_weight
         )
         train_subset = torch.utils.data.Subset(train_dataset, train_idx)

@@ -41,6 +41,7 @@ class Trainer:
         self.patience = patience
         self.delta = delta
         self.label = label
+        self.roi = roi
         self.roi_model = None
         self.filename = filename
         self.roi_weight = roi_weight
