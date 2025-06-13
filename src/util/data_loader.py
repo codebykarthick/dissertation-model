@@ -95,7 +95,7 @@ class ClassificationDataset(Dataset):
         self.defined_transforms = defined_transforms
 
     def _create_roi_model(self):
-        if self.roi and self.roi_weight != "" and not self.roi_model:
+        if self.roi and self.roi_weight != "" and self.roi_model == None:
             self.roi_model = YOLO(os.path.join(
                 "weights", "yolo", self.roi_weight)).eval()
 
