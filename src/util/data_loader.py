@@ -96,6 +96,7 @@ class ClassificationDataset(Dataset):
 
     def _create_roi_model(self):
         if self.roi and self.roi_weight != "" and self.roi_model == None:
+            log.info("Creating YOLO model.")
             self.roi_model = YOLO(os.path.join(
                 "weights", "yolo", self.roi_weight)).eval()
 
