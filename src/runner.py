@@ -4,7 +4,6 @@ import sys
 import torch.multiprocessing as mp
 
 from util.arg_checks import create_parser, validate_args
-from util.cloud_tools import auto_shutdown
 from util.logger import setup_logger
 from util.trainers.classification_trainer import (
     ClassificationCrossValidationTrainer,
@@ -98,6 +97,3 @@ if __name__ == "__main__":
             runner.train()
         elif mode == "export":
             runner.export()
-
-    if args.env == "cloud":
-        auto_shutdown(args.copy_dir)

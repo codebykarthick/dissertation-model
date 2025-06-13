@@ -45,8 +45,6 @@ def create_parser() -> ArgumentParser:
                         help="Use trained YOLO to detect the region before using it for classification.")
     parser.add_argument('--roi_weight', type=str, default="train/weights/best.pt",
                         help='File name of YOLO weight to use during pipeline.')
-    parser.add_argument("--env", type=str, choices=["local", "cloud"], default="local",
-                        help="Cloud mode has a special shutdown sequence to save resources.")
     parser.add_argument("--copy_dir", type=str,
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
     parser.add_argument("--patience", type=int,
@@ -66,9 +64,3 @@ def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], ar
         if not args.roi_weight:
             parser.error(
                 '--roi_weight has to be provided to load the YOLO model if classfying with RoI.')
-    if args.env == "cloud":
-        if not args.copy_dir:
-            parser.error("--copy_dir is required when env is cloud")
-        elif not os.path.exists(args.copy_dir):
-            log.error("The copy directory does not exist, halting execution.")
-            sys.exit(1)
