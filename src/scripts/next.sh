@@ -1,5 +1,6 @@
 #!/bin/sh
 COMMIT_MESSAGE="$1"
+export YOLO_CONFIG_DIR=/tmp/ultralytics_config
 
 # Starting directory
 echo "Working directory: $(pwd)"

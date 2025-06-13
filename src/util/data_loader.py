@@ -83,7 +83,7 @@ class ClassificationDataset(Dataset):
         image = Image.open(img_path).convert("RGB")
         label = self.label_map[self.images[index]]
 
-        if self.roi_model is not None:
+        if self.roi_model != None:
             image = self._apply_roi_and_crop(image)
 
         if self.defined_transforms:
@@ -96,7 +96,6 @@ class ClassificationDataset(Dataset):
 
     def _create_roi_model(self):
         if self.roi and self.roi_weight != "" and self.roi_model == None:
-            log.info("Creating YOLO model.")
             self.roi_model = YOLO(os.path.join(
                 "weights", "yolo", self.roi_weight)).eval()
 
