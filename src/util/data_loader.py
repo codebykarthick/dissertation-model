@@ -259,8 +259,6 @@ def generate_train_transforms(dimensions: list[int], fill_with_noise: bool = Fal
         transforms.RandomResizedCrop(dimensions, scale=(0.8, 1.0)),
         transforms.ColorJitter(
             brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
-        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
-        transforms.RandomAffine(degrees=10, translate=(0.05, 0.05), shear=5),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
                              0.229, 0.224, 0.225]),
