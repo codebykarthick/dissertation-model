@@ -1,4 +1,6 @@
 #!/bin/sh
+COMMIT_MESSAGE="$1"
+
 # Starting directory
 echo "Working directory: $(pwd)"
 
@@ -7,18 +9,22 @@ python data_setup.py classification
 
 # List of experiments to perform for the next run
 # Cross Val Baseline
+echo "Running cross validation with baseline setup"
 python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
 python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
 
 # Cross Val RoI
+echo "Running cross validation with RoI"
 python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
 python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
 
 # # Cross Val Weighted Loss
+echo "Running cross validation with Weighted loss"
 python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
 python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
 
 # # Cross Val Weighted Sampling
+echo "Running cross validation with weighted sampling"
 python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
 python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
 
@@ -40,3 +46,25 @@ python runner.py --task_type classification_crossval --models cnn --mode train -
 # Siamese
 # echo "Siamese Few-Shot with ShuffleNet backend"
 # python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e04 --batch 32 --workers 8 --patience 10 --weighted_sampling --label siamese_roi_weighted_sampling
+
+
+
+
+### SHUTDOWN POD
+# Check if Commit message is empty
+if [ -z "$COMMIT_MESSAGE" ]; then
+  echo "Error: Commit message is required."
+  exit 1
+fi
+
+# Commit the results to the repo before shutting down
+echo "Committing results with message: $COMMIT_MESSAGE"
+
+# Cd to src/ directory.
+cd ..
+git add .
+git commit -m "$COMMIT_MESSAGE"
+
+# Shutdown Call to terminate the pod
+curl -X DELETE "https://rest.runpod.io/v1/pods/${RUNPOD_POD_ID}" \
+     -H "Authorization: Bearer ${API_KEY}"
