@@ -143,8 +143,8 @@ class ClassificationCrossValidationTrainer(Trainer):
                         val_loss = criterion(
                             outputs, labels.view(-1, 1).float())
                         total_val_loss += val_loss.item()
-                        preds = torch.sigmoid(outputs).cpu().numpy()
-                        val_preds.extend(preds)
+                        preds = torch.sigmoid(outputs).view(-1).cpu().numpy()
+                        val_preds.extend(preds.tolist())
                         val_labels.extend(labels.cpu().numpy())
 
                 avg_val_loss = total_val_loss / len(val_loader)
@@ -350,8 +350,8 @@ class ClassificationTrainer(Trainer):
                 loss = self.criterion(outputs, labels.view(-1, 1).float())
                 total_val_loss += loss.item()
 
-                preds = torch.sigmoid(outputs).cpu().numpy()
-                val_preds.extend(preds)
+                preds = torch.sigmoid(outputs).view(-1).cpu().numpy()
+                val_preds.extend(preds.tolist())
                 val_labels.extend(labels.cpu().numpy())
 
         avg_val_loss = total_val_loss / len(self.val_loader)
@@ -383,8 +383,8 @@ class ClassificationTrainer(Trainer):
                 labels = labels.to(self.device)
 
                 outputs = model(images)
-                preds = torch.sigmoid(outputs).cpu().numpy()
-                test_preds.extend(preds)
+                preds = torch.sigmoid(outputs).view(-1).cpu().numpy()
+                test_preds.extend(preds.tolist())
                 test_labels.extend(labels.cpu().numpy())
 
         test_preds_bin = [1 if p > 0.5 else 0 for p in test_preds]

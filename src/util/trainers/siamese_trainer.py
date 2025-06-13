@@ -45,7 +45,7 @@ class SiameseTrainer(Trainer):
             self.model_name, self.task_type)
 
         # 80% train, 20% temp
-        train_idx, temp_idx, train_labels, temp_labels = train_test_split(
+        train_idx, temp_idx, _, temp_labels = train_test_split(
             all_indices, all_labels, test_size=0.2, stratify=all_labels, random_state=42
         )
         # Split temp into 50/50 → 10% val, 10% test
