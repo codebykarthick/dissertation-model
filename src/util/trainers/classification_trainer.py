@@ -1,10 +1,20 @@
 import os
+from datetime import datetime
 from typing import cast
 
 import numpy as np
 import torch
 import torch.multiprocessing as mp
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    f1_score,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+)
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
@@ -387,15 +397,25 @@ class ClassificationTrainer(Trainer):
                 test_preds.extend(preds.tolist())
                 test_labels.extend(labels.cpu().numpy())
 
-        test_preds_bin = [1 if p > 0.5 else 0 for p in test_preds]
         test_labels_int = [int(l) for l in test_labels]
+        precision, recall, _ = precision_recall_curve(
+            test_labels_int, test_preds)
+        auc_score = auc(recall, precision)
 
-        precision = precision_score(test_labels_int, test_preds_bin)
-        recall = recall_score(test_labels_int, test_preds_bin)
-        f1 = f1_score(test_labels_int, test_preds_bin)
-        acc = accuracy_score(test_labels_int, test_preds_bin)
+        fpr, tpr, _ = roc_curve(test_labels_int, test_preds)
+        roc_auc = roc_auc_score(test_labels_int, test_preds)
 
-        self.log.info(
-            f"Test Results | Acc: {acc:.4f} | Prec: {precision:.4f} | "
-            f"Rec: {recall:.4f} | F1: {f1:.4f}"
-        )
+        metrics = {
+            "auc_score": auc_score,
+            "precision": precision.tolist(),
+            "recall": recall.tolist(),
+            "fpr": fpr.tolist(),
+            "tpr": tpr.tolist(),
+            "roc_auc": roc_auc,
+            "probs": test_preds,
+            "labels": test_labels_int
+        }
+
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f"{self.model_name}_AUC_ROC_{timestamp}.json"
+        self.save_results(metrics=metrics, filename=filename)

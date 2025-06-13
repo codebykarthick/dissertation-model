@@ -97,7 +97,7 @@ class ClassificationDataset(Dataset):
     def _create_roi_model(self):
         if self.roi and self.roi_weight != "" and self.roi_model == None:
             self.roi_model = YOLO(os.path.join(
-                "weights", "yolo", self.roi_weight)).eval()
+                "weights", "yolo", self.roi_weight)).to(self.device).eval()
 
     def _apply_roi_and_crop(self, image: Image.Image) -> Image.Image:
         if self.roi_model is None:
@@ -153,6 +153,7 @@ class SiameseDataset(Dataset):
             img for img in positive_anchors if img in self.label_map]
         self.negative_anchors = [
             img for img in negative_anchors if img in self.label_map]
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Quick sanity assertion
         assert len(self.positive_anchors) == len(positive_anchors)
@@ -183,7 +184,7 @@ class SiameseDataset(Dataset):
     def _create_roi_model(self):
         if self.roi and self.roi_weight != "" and not self.roi_model:
             self.roi_model = YOLO(os.path.join(
-                "weights", "yolo", self.roi_weight)).eval()
+                "weights", "yolo", self.roi_weight)).to(self.device).eval()
 
     def __len__(self):
         return len(self.pairs)

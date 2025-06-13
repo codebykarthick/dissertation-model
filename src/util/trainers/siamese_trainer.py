@@ -1,9 +1,19 @@
 import os
+from datetime import datetime
 from typing import cast
 
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    f1_score,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+)
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
@@ -243,10 +253,25 @@ class SiameseTrainer(Trainer):
                 all_preds.extend(preds)
                 all_labels.extend(label.numpy().tolist())
 
-        acc = accuracy_score(all_labels, all_preds)
-        prec = precision_score(all_labels, all_preds)
-        rec = recall_score(all_labels, all_preds)
-        f1 = f1_score(all_labels, all_preds)
-        self.log.info(
-            f"Evaluation Results | Acc: {acc:.4f} | Prec: {prec:.4f} | Rec: {rec:.4f} | F1: {f1:.4f}"
-        )
+        test_labels_int = [int(l) for l in all_labels]
+        precision, recall, _ = precision_recall_curve(
+            test_labels_int, all_preds)
+        auc_score = auc(recall, precision)
+
+        fpr, tpr, _ = roc_curve(test_labels_int, all_preds)
+        roc_auc = roc_auc_score(test_labels_int, all_preds)
+
+        metrics = {
+            "auc_score": auc_score,
+            "precision": precision.tolist(),
+            "recall": recall.tolist(),
+            "fpr": fpr.tolist(),
+            "tpr": tpr.tolist(),
+            "roc_auc": roc_auc,
+            "probs": all_preds,
+            "labels": test_labels_int
+        }
+
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f"{self.model_name}_AUC_ROC_{timestamp}.json"
+        self.save_results(metrics=metrics, filename=filename)
