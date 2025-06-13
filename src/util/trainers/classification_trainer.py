@@ -39,7 +39,7 @@ class ClassificationCrossValidationTrainer(Trainer):
         kf = StratifiedKFold(n_splits=self.k, shuffle=True, random_state=42)
         # Load base dataset for stratification
         base_dataset = ClassificationDataset(
-            self.image_dir, roi_model=self.roi_model)
+            self.image_dir, roi_weight=self.roi_weight)
         labels_array = np.array([base_dataset.label_map[img]
                                 for img in base_dataset.images])
 
@@ -51,9 +51,9 @@ class ClassificationCrossValidationTrainer(Trainer):
 
             # Instantiate separate dataset instances for this fold
             train_dataset = ClassificationDataset(
-                self.image_dir, roi_model=self.roi_model)
+                self.image_dir, roi_weight=self.roi_weight)
             val_dataset = ClassificationDataset(
-                self.image_dir, roi_model=self.roi_model)
+                self.image_dir, roi_weight=self.roi_weight)
             train_subset = torch.utils.data.Subset(train_dataset, train_idx)
             val_subset = torch.utils.data.Subset(val_dataset, val_idx)
 
@@ -196,7 +196,7 @@ class ClassificationTrainer(Trainer):
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
         base_dataset = ClassificationDataset(
-            self.image_dir, roi_model=self.roi_model)
+            self.image_dir, roi_weight=self.roi_weight)
         self.model, self.dimensions = self.create_model_from_name(
             self.model_name, self.task_type)
 
@@ -216,11 +216,11 @@ class ClassificationTrainer(Trainer):
 
         # Instantiate separate dataset instances for splits
         train_dataset = ClassificationDataset(
-            self.image_dir, roi_model=self.roi_model)
+            self.image_dir, roi_weight=self.roi_weight)
         val_dataset = ClassificationDataset(
-            self.image_dir, roi_model=self.roi_model)
+            self.image_dir, roi_weight=self.roi_weight)
         test_dataset = ClassificationDataset(
-            self.image_dir, roi_model=self.roi_model)
+            self.image_dir, roi_weight=self.roi_weight)
         train_subset = torch.utils.data.Subset(train_dataset, train_idx)
         val_subset = torch.utils.data.Subset(val_dataset, val_idx)
         test_subset = torch.utils.data.Subset(test_dataset, test_idx)

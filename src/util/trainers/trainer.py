@@ -5,7 +5,6 @@ import sys
 from datetime import datetime
 
 import torch
-from ultralytics import YOLO
 
 from models.classification.lfd_cnn import LFD_CNN
 from models.classification.pretrained_models import (
@@ -44,11 +43,7 @@ class Trainer:
         self.label = label
         self.roi_model = None
         self.filename = filename
-
-        if roi:
-            # Keep YOLO in CPU mode to prevent issues with CUDA in fork
-            self.roi_model = YOLO(os.path.join(
-                "weights", "yolo", roi_weight)).eval()
+        self.roi_weight = roi_weight
 
     def create_model_from_name(self, name: str, task_type: str) -> tuple[torch.nn.Module, list[int]]:
         """Create the model instance from the name of the model specified. Halts execution

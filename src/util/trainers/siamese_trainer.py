@@ -34,7 +34,7 @@ class SiameseTrainer(Trainer):
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
-            roi_model=self.roi_model
+            roi_weight=self.roi_weight
         )
         # Prepare indices and labels for splitting siamese pairs
         all_indices = list(range(len(base_dataset)))
@@ -58,19 +58,19 @@ class SiameseTrainer(Trainer):
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
-            roi_model=self.roi_model
+            roi_weight=self.roi_weight
         )
         val_dataset = SiameseDataset(
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
-            roi_model=self.roi_model
+            roi_weight=self.roi_weight
         )
         test_dataset = SiameseDataset(
             image_dir=self.image_dir,
             positive_anchors=positive_anchors,
             negative_anchors=negative_anchors,
-            roi_model=self.roi_model
+            roi_weight=self.roi_weight
         )
         train_subset = torch.utils.data.Subset(train_dataset, train_idx)
         val_subset = torch.utils.data.Subset(val_dataset, val_idx)

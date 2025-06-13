@@ -7,6 +7,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+from ultralytics import YOLO
 
 from util.constants import CONSTANTS
 from util.logger import setup_logger
@@ -56,7 +57,7 @@ class ApplyCLAHE:
 
 
 class ClassificationDataset(Dataset):
-    def __init__(self, image_dir: str, roi_model: torch.nn.Module | None = None, defined_transforms=None, conf_threshold: float = 0.3):
+    def __init__(self, image_dir: str, roi_weight: str = "", defined_transforms=None, conf_threshold: float = 0.3):
         super().__init__()
         self.image_dir = os.path.join(image_dir, 'Images')
         self.label_file = os.path.join(image_dir, 'labels.csv')
@@ -67,13 +68,15 @@ class ClassificationDataset(Dataset):
         self.label_map = dict(
             zip(self.labels['file_id'], self.labels['is_asp_fungi']))
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.roi_model = roi_model
+        self.roi_weight = roi_weight
         self.conf_threshold = conf_threshold
+        self.roi_model = None
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, index):
+        self._create_roi_model()
         img_path = os.path.join(self.image_dir, self.images[index])
         image = Image.open(img_path).convert("RGB")
         label = self.label_map[self.images[index]]
@@ -88,6 +91,11 @@ class ClassificationDataset(Dataset):
 
     def set_transforms(self, defined_transforms):
         self.defined_transforms = defined_transforms
+
+    def _create_roi_model(self):
+        if self.roi_weight != "" and not self.roi_model:
+            self.roi_model = YOLO(os.path.join(
+                "weights", "yolo", self.roi_weight)).eval()
 
     def _apply_roi_and_crop(self, image: Image.Image) -> Image.Image:
         if self.roi_model is None:
@@ -123,7 +131,7 @@ class SiameseDataset(Dataset):
         positive_anchors: list[str],
         negative_anchors: list[str],
         transform=None,
-        roi_model: torch.nn.Module | None = None,
+        roi_weight: str = "",
         conf_threshold: float = 0.3
     ):
         super().__init__()
@@ -133,7 +141,8 @@ class SiameseDataset(Dataset):
         self.label_map = dict(
             zip(self.labels_df['file_id'], self.labels_df['is_asp_fungi']))
         self.transform = transform
-        self.roi_model = roi_model
+        self.roi_model = None
+        self.roi_weight = roi_weight
 
         self.image_list = sorted(os.listdir(self.image_dir))
         self.positive_anchors = [
@@ -167,10 +176,16 @@ class SiameseDataset(Dataset):
 
         return pairs
 
+    def _create_roi_model(self):
+        if self.roi_weight != "" and not self.roi_model:
+            self.roi_model = YOLO(os.path.join(
+                "weights", "yolo", self.roi_weight)).eval()
+
     def __len__(self):
         return len(self.pairs)
 
     def __getitem__(self, index):
+        self._create_roi_model()
         anchor_name, candidate_name, label = self.pairs[index]
         img1 = Image.open(os.path.join(
             self.image_dir, anchor_name)).convert("RGB")
