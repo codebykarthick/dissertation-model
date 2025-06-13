@@ -1,0 +1,9 @@
+{
+    "model": "mobilenetv3",
+    "fold": 9,
+    "accuracy": 0.6551724137931034,
+    "precision": 0.2727272727272727,
+    "recall": 0.6,
+    "f1_score": 0.375,
+    "val_loss": 0.6896565556526184
+}

@@ -1,0 +1,9 @@
+{
+    "model": "shufflenet",
+    "fold": 8,
+    "accuracy": 0.7931034482758621,
+    "precision": 0.45454545454545453,
+    "recall": 1.0,
+    "f1_score": 0.625,
+    "val_loss": 0.6062540411949158
+}
