@@ -31,7 +31,7 @@ class Runner:
                 k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
                 epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
                 batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
-                num_workers=num_workers, task_type=task_type, label=label)
+                num_workers=num_workers, task_type=task_type, label=label, filename=filename)
         elif task_type == "siamese":
             self.trainer = SiameseTrainer(
                 roi=roi, fill_noise=fill_noise, model_name=model_name, roi_weight=roi_weight,
