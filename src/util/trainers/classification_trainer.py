@@ -383,6 +383,7 @@ class ClassificationTrainer(Trainer):
         """Final evaluation on the test set."""
         self.log.info("Evaluating on test set")
         model, _ = self.create_model_from_name(self.model_name, self.task_type)
+        model = model.to(self.device)
         self.load_model(model, self.filename)
 
         model.eval()
