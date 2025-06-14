@@ -242,7 +242,7 @@ class SiameseTrainer(Trainer):
             self.log.warning("Model not found for evaluation")
             return
         model.eval()
-        all_preds, all_labels = [], []
+        all_probs, all_preds, all_labels = [], [], []
         with torch.no_grad():
             for img1, img2, label in tqdm(self.test_loader, desc="Evaluation", leave=False):
                 img1 = img1.to(self.device)
@@ -250,17 +250,18 @@ class SiameseTrainer(Trainer):
 
                 outputs = model(img1, img2)
                 probs = torch.sigmoid(-outputs.view(-1)).cpu().numpy()
+                all_probs.extend(probs.tolist())
                 preds = [1 if p > 0.5 else 0 for p in probs]
                 all_preds.extend(preds)
                 all_labels.extend(label.numpy().tolist())
 
         test_labels_int = [int(l) for l in all_labels]
         precision, recall, _ = precision_recall_curve(
-            test_labels_int, all_preds)
+            test_labels_int, all_probs)
         auc_score = auc(recall, precision)
 
-        fpr, tpr, _ = roc_curve(test_labels_int, all_preds)
-        roc_auc = roc_auc_score(test_labels_int, all_preds)
+        fpr, tpr, _ = roc_curve(test_labels_int, all_probs)
+        roc_auc = roc_auc_score(test_labels_int, all_probs)
 
         metrics = {
             "auc_score": auc_score,
@@ -269,7 +270,7 @@ class SiameseTrainer(Trainer):
             "fpr": fpr.tolist(),
             "tpr": tpr.tolist(),
             "roc_auc": roc_auc,
-            "probs": all_preds,
+            "probs": all_probs,
             "labels": test_labels_int
         }
 
