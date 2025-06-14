@@ -94,5 +94,7 @@ if __name__ == "__main__":
                     "Dataset does not exist for training, please download using data_setup.py before training.")
                 sys.exit(1)
             runner.train()
+        if mode == "evaluate":
+            runner.evaluate()
         elif mode == "export":
             runner.export()
