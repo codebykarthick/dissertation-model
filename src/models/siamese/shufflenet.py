@@ -14,8 +14,12 @@ class SiameseShuffleNet(nn.Module):
 
         in_features = cast(nn.Linear, model.fc).in_features
 
-        # Remove the final pooling and classifier layers, keep feature extractor backbone
-        self.feature_extractor = nn.Sequential(*list(model.children())[:-2])
+        # Build feature extractor backbone, excluding original classifier and pooling
+        modules = list(model.children())[:-1]  # remove original classifier
+        # Remove original pooling layer if present
+        if isinstance(modules[-1], nn.AdaptiveAvgPool2d):
+            modules = modules[:-1]
+        self.feature_extractor = nn.Sequential(*modules)
         # Freeze feature extractor weights
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
