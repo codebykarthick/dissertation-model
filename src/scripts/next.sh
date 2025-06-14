@@ -50,7 +50,7 @@ python runner.py --task_type classification --models shufflenet --mode train --e
 
 # Siamese
 echo "Running Siamese Few-Shot with ShuffleNet backend"
-python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_roi_weighted_sampling
+python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_shufflenet
 
 
 
