@@ -44,9 +44,9 @@ python data_setup.py classification
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --weighted_sampling --label cross_val_roi_weighted_both
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --weighted_loss  --weighted_sampling --label cross_val_roi_weighted_both
 
-# Save an instance of the model.
-echo "Running classification on shufflenet with RoI and Weighted sampling to save the model."
-python runner.py --task_type classification --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling
+# # Save an instance of the model.
+# echo "Running classification on shufflenet with RoI and Weighted sampling to save the model."
+# python runner.py --task_type classification --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling
 
 # Siamese
 echo "Running Siamese Few-Shot with ShuffleNet backend"
