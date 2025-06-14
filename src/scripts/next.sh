@@ -74,6 +74,7 @@ echo "Committing results with message: $COMMIT_MESSAGE"
 cd ..
 git add .
 git commit -m "$COMMIT_MESSAGE"
+git push origin main
 
 # Shutdown Call to terminate the pod
 curl -X DELETE "https://rest.runpod.io/v1/pods/${RUNPOD_POD_ID}" \
