@@ -21,7 +21,7 @@ def create_parser() -> ArgumentParser:
                         help="Type of task to perform.")
     parser.add_argument('--models', nargs='+', required=True,
                         help='List of models to train, save, or evaluate')
-    parser.add_argument('--mode', choices=['train', 'export'],
+    parser.add_argument('--mode', choices=['train', 'export', 'evaluate'],
                         required=True, help='Mode of operation: train, evaluate for performance benchmark or export for mobile app.')
     parser.add_argument('--k_fold', '-k', default=10,
                         help="Number of folds to be set for the cross validation.")
