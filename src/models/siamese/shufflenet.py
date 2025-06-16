@@ -13,6 +13,10 @@ class SiameseShuffleNet(nn.Module):
         self.model.fc = nn.Identity()
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
+        # Freeze all backbone layers; only train the embedding head
+        for param in self.model.parameters():
+            param.requires_grad = False
+
         # Embedding head for metric learning
         self.embedding_net = nn.Sequential(
             nn.Linear(in_features, hidden_units),
