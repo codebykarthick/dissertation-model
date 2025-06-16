@@ -1,11 +1,16 @@
 import torch.nn as nn
-from torchvision.models import shufflenet_v2_x1_0
+import torch.nn.functional as F
+from torchvision import models
+from torchvision.models import ShuffleNet_V2_X1_0_Weights, shufflenet_v2_x1_0
 
 
 class SiameseShuffleNet(nn.Module):
     def __init__(self, in_features=1024, hidden_units=512, dropout_rate=0.5):
         super(SiameseShuffleNet, self).__init__()
-        self.model = shufflenet_v2_x1_0(pretrained=True)
+        self.model = models.shufflenet_v2_x1_0(
+            weights=ShuffleNet_V2_X1_0_Weights.DEFAULT)
+        # Remove the pretrained classifier head
+        self.model.fc = nn.Identity()
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
         # Embedding head for metric learning
@@ -27,6 +32,7 @@ class SiameseShuffleNet(nn.Module):
         x = self.model.stage2(x)
         x = self.model.stage3(x)
         x = self.model.stage4(x)
+        x = self.model.conv5(x)
         x = self.pool(x)
         x = x.view(x.size(0), -1)
         return x
@@ -35,4 +41,5 @@ class SiameseShuffleNet(nn.Module):
         """Return the embedding for a single input."""
         features = self.forward_once(x)
         embedding = self.embedding_net(features)
-        return embedding
+        # L2-normalize embeddings for metric learning
+        return F.normalize(embedding, p=2, dim=1)
