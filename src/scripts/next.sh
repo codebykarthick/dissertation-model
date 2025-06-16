@@ -51,8 +51,8 @@ python data_setup.py classification
 # python runner.py --task_type classification --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling
 
 # Siamese
-echo "Running Siamese Few-Shot"
-python runner.py --task_type siamese --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot
+# echo "Running Siamese Few-Shot"
+# python runner.py --task_type siamese --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot
 
 # # Evaluation on test set
 # echo "Running evaluation on Test set for EfficientNet fine tuning"
@@ -61,9 +61,9 @@ python runner.py --task_type siamese --models mobilenetv3 efficientnet shufflene
 # python runner.py --task_type classification --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-14_11-53-58.pth
 
 # echo "Running evaluation on Test set for siamese few shot tuning"
-# python runner.py --task_type siamese --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_shufflenet --file shufflenet_fold1_2025-06-14_12-44-42.pth
-# python runner.py --task_type siamese --models mobilenetv3 --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file 
-# python runner.py --task_type siamese --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file 
+python runner.py --task_type siamese --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file shufflenet_fold1_2025-06-16_14-34-10.pth
+python runner.py --task_type siamese --models mobilenetv3 --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file mobilenetv3_fold1_2025-06-16_14-25-06.pth
+python runner.py --task_type siamese --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file efficientnet_fold1_2025-06-16_14-30-18.pth
 
 ### SHUTDOWN POD
 # Check if Commit message is empty
