@@ -55,7 +55,7 @@ if __name__ == "__main__":
     valid_models = {
         "classification": ["mobilenetv3", "cnn", "efficientnet", "shufflenet"],
         "classification_crossval": ["mobilenetv3", "cnn", "efficientnet", "shufflenet"],
-        "siamese": ["shufflenet"]
+        "siamese": ["mobilenetv3", "efficientnet", "shufflenet"]
     }
 
     parser = create_parser()

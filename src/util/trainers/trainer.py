@@ -12,6 +12,8 @@ from models.classification.pretrained_models import (
     get_mobilenetv3_tuned,
     get_shufflenet_tuned,
 )
+from models.siamese.efficientnet import SiameseEfficientNet
+from models.siamese.mobilenet import SiameseMobileNet
 from models.siamese.shufflenet import SiameseShuffleNet
 from util.constants import CONSTANTS
 from util.logger import setup_logger
@@ -70,7 +72,11 @@ class Trainer:
                 self.log.error(f"{name} is not a valid model.")
                 sys.exit(1)
         elif task_type == "siamese":
-            if name == "shufflenet":
+            if name == "mobilenetv3":
+                model = SiameseMobileNet()
+            elif name == "efficientnet":
+                model = SiameseEfficientNet()
+            elif name == "shufflenet":
                 model = SiameseShuffleNet()
             else:
                 self.log.error(f"{name} is not a valid model.")
