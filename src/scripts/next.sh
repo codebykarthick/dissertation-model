@@ -44,20 +44,22 @@ python data_setup.py classification
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --weighted_sampling --label cross_val_roi_weighted_both
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --weighted_loss  --weighted_sampling --label cross_val_roi_weighted_both
 
-# # Save an instance of the model.
+# Save an instance of the model.
+echo "Running training on Test set for Normal fine tuning - EfficientNet"
+python runner.py --task_type classification --models efficientnet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling
 # echo "Running classification on shufflenet with RoI and Weighted sampling to save the model."
 # python runner.py --task_type classification --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling
 
-# # Siamese
-# echo "Running Siamese Few-Shot with ShuffleNet backend"
-# python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_shufflenet
+# Siamese
+echo "Running Siamese Few-Shot with ShuffleNet backend"
+python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_shufflenet
 
 # # Evaluation on test set
 # echo "Running evaluation on Test set for Normal fine tuning"
 # python runner.py --task_type classification --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-14_11-53-58.pth
 
-echo "Running evaluation on Test set for siamese few shot tuning"
-python runner.py --task_type siamese --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_shufflenet --file shufflenet_fold1_2025-06-14_12-44-42.pth
+# echo "Running evaluation on Test set for siamese few shot tuning"
+# python runner.py --task_type siamese --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_shufflenet --file shufflenet_fold1_2025-06-14_12-44-42.pth
 
 
 ### SHUTDOWN POD
