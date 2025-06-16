@@ -12,7 +12,6 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
-    roc_curve,
 )
 from sklearn.model_selection import train_test_split
 from torch.nn import TripletMarginLoss

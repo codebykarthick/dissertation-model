@@ -147,8 +147,9 @@ class SiameseDataset(Dataset):
         self.roi_model = None
         self.roi_weight = roi_weight
         self.image_list = sorted(os.listdir(self.image_dir))
+
         # If a subset of indices is provided, restrict to those images
-        if allowed_indices is not None:
+        if len(allowed_indices) != 0:
             full_list = self.image_list
             self.image_list = [full_list[i] for i in allowed_indices]
             # restrict the label map to only these images
