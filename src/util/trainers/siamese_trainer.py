@@ -37,6 +37,7 @@ class SiameseTrainer(Trainer):
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
+        self.margin = 0.5
 
         # Base dataset for stratification
         base_dataset = SiameseDataset(
@@ -97,7 +98,7 @@ class SiameseTrainer(Trainer):
 
         # Weighted sampling and triplet loss
         sampler = None
-        criterion = TripletMarginLoss(margin=self.delta, p=2)
+        criterion = TripletMarginLoss(margin=self.margin, p=2)
 
         if self.is_sampling_weighted:
             train_labels_fold = np.array(all_labels)[train_idx]
