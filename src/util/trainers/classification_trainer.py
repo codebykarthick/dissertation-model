@@ -365,8 +365,18 @@ class ClassificationTrainer(Trainer):
                 val_labels.extend(labels.cpu().numpy())
 
         avg_val_loss = total_val_loss / len(self.val_loader)
-        val_preds_bin = [1 if p > 0.5 else 0 for p in val_preds]
         val_labels_int = [int(l) for l in val_labels]
+
+        best_f1 = 0.0
+        best_thresh = 0.5
+        for t in np.linspace(0, 1, 101):
+            preds_bin = [1 if p >= t else 0 for p in val_preds]
+            f1 = f1_score(val_labels_int, preds_bin)
+            if f1 > best_f1:
+                best_f1 = f1
+                best_thresh = t
+
+        val_preds_bin = [1 if p >= best_thresh else 0 for p in val_preds]
         current_f1 = float(f1_score(val_labels_int, val_preds_bin))
 
         metrics = {
@@ -375,7 +385,8 @@ class ClassificationTrainer(Trainer):
             "precision": precision_score(val_labels_int, val_preds_bin),
             "recall": recall_score(val_labels_int, val_preds_bin),
             "f1_score": current_f1,
-            "val_loss": avg_val_loss
+            "val_loss": avg_val_loss,
+            "threshold": best_thresh
         }
         return current_f1, metrics
 
