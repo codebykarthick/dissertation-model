@@ -51,8 +51,8 @@ python data_setup.py classification
 # python runner.py --task_type classification --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling
 
 # Siamese
-echo "Running Siamese Few-Shot with ShuffleNet backend"
-python runner.py --task_type siamese --models shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_shufflenet
+echo "Running Siamese Few-Shot"
+python runner.py --task_type siamese --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label siamese_fewshot
 
 # # Evaluation on test set
 # echo "Running evaluation on Test set for EfficientNet fine tuning"
