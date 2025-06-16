@@ -15,6 +15,7 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import train_test_split
+from torch.nn import TripletMarginLoss
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 
@@ -37,22 +38,22 @@ class SiameseTrainer(Trainer):
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
-        positive_anchors = CONSTANTS["siamese"]["positive_anchors"]
-        negative_anchors = CONSTANTS["siamese"]["negative_anchors"]
+
         # Base dataset for stratification
         base_dataset = SiameseDataset(
             image_dir=self.image_dir,
             roi_enabled=roi,
-            positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors,
             roi_weight=self.roi_weight
         )
-        # Prepare indices and labels for splitting siamese pairs
+        # Prepare indices and labels for splitting images
         all_indices = list(range(len(base_dataset)))
-        all_labels = [label for _, _, label in base_dataset.pairs]
+        all_labels = [
+            base_dataset.label_map[base_dataset.image_list[i]]
+            for i in all_indices
+        ]
 
         # Prepare model and create data loaders
-        self.model, self.dimensions = self.create_model_from_name(
+        _, self.dimensions = self.create_model_from_name(
             self.model_name, self.task_type)
 
         # 80% train, 20% temp
@@ -67,66 +68,51 @@ class SiameseTrainer(Trainer):
         # Instantiate separate dataset instances for splits
         train_dataset = SiameseDataset(
             image_dir=self.image_dir,
-            positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors,
             roi_enabled=roi,
-            roi_weight=self.roi_weight
+            roi_weight=self.roi_weight,
+            allowed_indices=train_idx
         )
         val_dataset = SiameseDataset(
             image_dir=self.image_dir,
-            positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors,
             roi_enabled=roi,
-            roi_weight=self.roi_weight
+            roi_weight=self.roi_weight,
+            allowed_indices=val_idx
         )
         test_dataset = SiameseDataset(
             image_dir=self.image_dir,
-            positive_anchors=positive_anchors,
-            negative_anchors=negative_anchors,
             roi_enabled=roi,
-            roi_weight=self.roi_weight
+            roi_weight=self.roi_weight,
+            allowed_indices=test_idx
         )
-        train_subset = torch.utils.data.Subset(train_dataset, train_idx)
-        val_subset = torch.utils.data.Subset(val_dataset, val_idx)
-        test_subset = torch.utils.data.Subset(test_dataset, test_idx)
 
         # Assign transforms
-        cast(SiameseDataset, train_subset.dataset).transform = generate_train_transforms(
+        train_dataset.transform = generate_train_transforms(
             self.dimensions, fill_with_noise=self.fill_noise
         )
-        cast(SiameseDataset, val_subset.dataset).transform = generate_eval_transforms(
+        val_dataset.transform = generate_eval_transforms(
             self.dimensions, fill_with_noise=self.fill_noise
         )
-        cast(SiameseDataset, test_subset.dataset).transform = generate_eval_transforms(
+        test_dataset.transform = generate_eval_transforms(
             self.dimensions, fill_with_noise=self.fill_noise
         )
 
-        # Weighted sampling and loss
+        # Weighted sampling and triplet loss
         sampler = None
-        criterion = torch.nn.BCEWithLogitsLoss()
+        criterion = TripletMarginLoss(margin=self.delta, p=2)
 
-        if self.is_sampling_weighted or self.is_loss_weighted:
-            # Compute class weights from base labels for train split
+        if self.is_sampling_weighted:
             train_labels_fold = np.array(all_labels)[train_idx]
             class_counts = np.bincount(train_labels_fold)
             class_weights = 1.0 / class_counts
+            sample_weights = class_weights[train_labels_fold]
+            sampler = WeightedRandomSampler(
+                weights=cast(list[float], sample_weights.tolist()),
+                num_samples=len(sample_weights),
+                replacement=True
+            )
 
-            if self.is_sampling_weighted:
-                sample_weights = class_weights[train_labels_fold]
-                sampler = WeightedRandomSampler(
-                    weights=cast(list[float], sample_weights.tolist()),
-                    num_samples=len(sample_weights),
-                    replacement=True
-                )
-            if self.is_loss_weighted:
-                pos_weight = torch.tensor(
-                    class_weights[1] / class_weights[0], device=self.device
-                )
-                criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
-        # DataLoaders
         self.train_loader = DataLoader(
-            train_subset,
+            train_dataset,
             batch_size=self.batch_size,
             sampler=sampler,
             shuffle=(sampler is None),
@@ -134,14 +120,14 @@ class SiameseTrainer(Trainer):
             pin_memory=True
         )
         self.val_loader = DataLoader(
-            val_subset,
+            val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=0,
             pin_memory=True
         )
         self.test_loader = DataLoader(
-            test_subset,
+            test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=0,
@@ -164,15 +150,16 @@ class SiameseTrainer(Trainer):
         for epoch in range(1, self.epochs + 1):
             model.train()
             total_loss = 0.0
-            for img1, img2, label in tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', leave=False):
-                img1 = img1.to(self.device)
-                img2 = img2.to(self.device)
-                label = label.to(self.device)
+            for anchor, positive, negative, _ in tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', leave=False):
+                anchor = anchor.to(self.device)
+                positive = positive.to(self.device)
+                negative = negative.to(self.device)
 
                 optimizer.zero_grad()
-                outputs = model(img1, img2)
-                logits = -outputs.view(-1)
-                loss = self.criterion(logits, label)
+                emb_a = model(anchor)
+                emb_p = model(positive)
+                emb_n = model(negative)
+                loss = self.criterion(emb_a, emb_p, emb_n)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
@@ -196,39 +183,33 @@ class SiameseTrainer(Trainer):
                     break
 
     def validate(self, model: torch.nn.Module) -> tuple[float, dict]:
-        """Run validation on Siamese pairs and return F1 and metric dict."""
-        model.eval()
-        all_preds, all_labels = [], []
+        """Run validation on triplets, compute average triplet loss and F1 on pair distances."""
         total_val_loss = 0.0
-
+        y_true = []
+        y_pred = []
+        model.eval()
         with torch.no_grad():
-            for img1, img2, label in tqdm(self.val_loader, desc="Validation", leave=False):
-                img1 = img1.to(self.device)
-                img2 = img2.to(self.device)
-                label = label.to(self.device)
+            for anchor, positive, negative, label in tqdm(self.val_loader, desc="Validation", leave=False):
+                anchor = anchor.to(self.device)
+                positive = positive.to(self.device)
+                negative = negative.to(self.device)
 
-                outputs = model(img1, img2)
-                logits = -outputs.view(-1)
-                val_loss = self.criterion(logits, label)
+                emb_a = model(anchor)
+                emb_p = model(positive)
+                emb_n = model(negative)
+                val_loss = self.criterion(emb_a, emb_p, emb_n)
                 total_val_loss += val_loss.item()
 
-                probs = torch.sigmoid(-outputs.view(-1)).cpu().numpy()
-                preds = [1 if p > 0.5 else 0 for p in probs]
-                all_preds.extend(preds)
-                all_labels.extend(label.cpu().numpy().tolist())
+                d_pos = torch.norm(emb_a - emb_p, p=2, dim=1).cpu().tolist()
+                d_neg = torch.norm(emb_a - emb_n, p=2, dim=1).cpu().tolist()
+
+                for dp, dn, lbl in zip(d_pos, d_neg, label):
+                    y_pred.append(1 if dp < dn else 0)
+                    y_true.append(lbl)
 
         avg_val_loss = total_val_loss / len(self.val_loader)
-        acc = accuracy_score(all_labels, all_preds)
-        prec = precision_score(all_labels, all_preds)
-        rec = recall_score(all_labels, all_preds)
-        f1 = cast(float, f1_score(all_labels, all_preds))
-        metrics = {
-            "val_loss": avg_val_loss,
-            "accuracy": acc,
-            "precision": prec,
-            "recall": rec,
-            "f1_score": f1
-        }
+        metrics = {"val_loss": avg_val_loss}
+        f1 = cast(float, f1_score(y_true, y_pred))
         return f1, metrics
 
     def evaluate(self):
@@ -238,42 +219,48 @@ class SiameseTrainer(Trainer):
         model = model.to(self.device)
         self.load_model(model, self.filename)
 
-        if model is None:
-            self.log.warning("Model not found for evaluation")
-            return
         model.eval()
-        all_probs, all_preds, all_labels = [], [], []
+        y_true = []
+        y_pred = []
+        scores = []
         with torch.no_grad():
-            for img1, img2, label in tqdm(self.test_loader, desc="Evaluation", leave=False):
-                img1 = img1.to(self.device)
-                img2 = img2.to(self.device)
+            for anchor, positive, negative, label in tqdm(self.test_loader, desc="Evaluation", leave=False):
+                anchor = anchor.to(self.device)
+                positive = positive.to(self.device)
+                negative = negative.to(self.device)
 
-                outputs = model(img1, img2)
-                probs = torch.sigmoid(-outputs.view(-1)).cpu().numpy()
-                all_probs.extend(probs.tolist())
-                preds = [1 if p > 0.5 else 0 for p in probs]
-                all_preds.extend(preds)
-                all_labels.extend(label.numpy().tolist())
+                emb_a = model(anchor)
+                emb_p = model(positive)
+                emb_n = model(negative)
 
-        test_labels_int = [int(l) for l in all_labels]
-        precision, recall, _ = precision_recall_curve(
-            test_labels_int, all_probs)
-        auc_score = auc(recall, precision)
+                d_pos = torch.norm(emb_a - emb_p, p=2, dim=1).cpu().tolist()
+                d_neg = torch.norm(emb_a - emb_n, p=2, dim=1).cpu().tolist()
 
-        fpr, tpr, _ = roc_curve(test_labels_int, all_probs)
-        roc_auc = roc_auc_score(test_labels_int, all_probs)
+                for dp, dn, lbl in zip(d_pos, d_neg, label):
+                    y_pred.append(1 if dp < dn else 0)
+                    score = dn - dp
+                    scores.append(score)
+                    y_true.append(lbl)
+
+        # compute classification metrics
+        acc = accuracy_score(y_true, y_pred)
+        prec_score = precision_score(y_true, y_pred)
+        rec_score = recall_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred)
+        roc_auc = roc_auc_score(y_true, scores)
+        precision, recall, _ = precision_recall_curve(y_true, scores)
+        pr_auc = auc(recall, precision)
 
         metrics = {
-            "auc_score": auc_score,
-            "precision": precision.tolist(),
-            "recall": recall.tolist(),
-            "fpr": fpr.tolist(),
-            "tpr": tpr.tolist(),
-            "roc_auc": roc_auc,
-            "probs": all_probs,
-            "labels": test_labels_int
+            "accuracy": acc,
+            "precision": prec_score,
+            "recall": rec_score,
+            "f1_score": f1,
+            "pr_curve": {"precision": precision.tolist(), "recall": recall.tolist()},
+            "pr_auc": pr_auc,
+            "roc_auc": roc_auc
         }
 
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        filename = f"{self.model_name}_AUC_ROC_{timestamp}.json"
+        filename = f"{self.model_name}_CLASSIFICATION_{timestamp}.json"
         self.save_results(metrics=metrics, filename=filename)

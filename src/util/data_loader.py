@@ -130,12 +130,11 @@ class SiameseDataset(Dataset):
     def __init__(
         self,
         image_dir: str,
-        positive_anchors: list[str],
-        negative_anchors: list[str],
         roi_enabled: bool,
         transform=None,
         roi_weight: str = "",
-        conf_threshold: float = 0.3
+        conf_threshold: float = 0.3,
+        allowed_indices: list[int] = []
     ):
         super().__init__()
         self.image_dir = os.path.join(image_dir, 'Images')
@@ -147,39 +146,21 @@ class SiameseDataset(Dataset):
         self.roi = roi_enabled
         self.roi_model = None
         self.roi_weight = roi_weight
-
         self.image_list = sorted(os.listdir(self.image_dir))
-        self.positive_anchors = [
-            img for img in positive_anchors if img in self.label_map]
-        self.negative_anchors = [
-            img for img in negative_anchors if img in self.label_map]
+        # If a subset of indices is provided, restrict to those images
+        if allowed_indices is not None:
+            full_list = self.image_list
+            self.image_list = [full_list[i] for i in allowed_indices]
+            # restrict the label map to only these images
+            self.label_map = {img: self.label_map[img]
+                              for img in self.image_list}
+        # Precompute positive and negative candidate lists
+        self.true_candidates = [
+            img for img in self.image_list if self.label_map[img] == 1]
+        self.false_candidates = [
+            img for img in self.image_list if self.label_map[img] == 0]
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # Quick sanity assertion
-        assert len(self.positive_anchors) == len(positive_anchors)
-        assert len(self.negative_anchors) == len(negative_anchors)
-
-        self.pairs = self._generate_pairs()
         self.conf_threshold = conf_threshold
-
-    def _generate_pairs(self):
-        pairs = []
-
-        # Positive pairs: same class as anchor
-        for anchor in self.positive_anchors:
-            anchor_label = self.label_map[anchor]
-            for candidate in self.image_list:
-                if candidate != anchor and self.label_map.get(candidate) == anchor_label:
-                    pairs.append((anchor, candidate, 1))
-
-        # Negative pairs: different class
-        for anchor in self.negative_anchors:
-            anchor_label = self.label_map[anchor]
-            for candidate in self.image_list:
-                if candidate != anchor and self.label_map.get(candidate) != anchor_label:
-                    pairs.append((anchor, candidate, 0))
-
-        return pairs
 
     def _create_roi_model(self):
         if self.roi and self.roi_weight != "" and not self.roi_model:
@@ -187,32 +168,51 @@ class SiameseDataset(Dataset):
                 "weights", "yolo", self.roi_weight)).to(self.device).eval()
 
     def __len__(self):
-        return len(self.pairs)
+        return len(self.image_list)
 
     def __getitem__(self, index):
         self._create_roi_model()
-        anchor_name, candidate_name, label = self.pairs[index]
-        img1 = Image.open(os.path.join(
+
+        # Use the provided index for the anchor
+        anchor_name = self.image_list[index]
+        anchor_label = self.label_map[anchor_name]
+
+        # Sample a positive example (same class)
+        if anchor_label == 1:
+            positive_name = random.choice(self.true_candidates)
+            negative_name = random.choice(self.false_candidates)
+        else:
+            negative_name = random.choice(self.true_candidates)
+            positive_name = random.choice(self.false_candidates)
+
+        # Load images
+        img_anchor = Image.open(os.path.join(
             self.image_dir, anchor_name)).convert("RGB")
-        img2 = Image.open(os.path.join(
-            self.image_dir, candidate_name)).convert("RGB")
+        img_positive = Image.open(os.path.join(
+            self.image_dir, positive_name)).convert("RGB")
+        img_negative = Image.open(os.path.join(
+            self.image_dir, negative_name)).convert("RGB")
 
+        # Apply ROI cropping if enabled
         if self.roi_model is not None:
-            img1 = self._apply_roi_and_crop(img1)
-            img2 = self._apply_roi_and_crop(img2)
+            img_anchor = self._apply_roi_and_crop(img_anchor)
+            img_positive = self._apply_roi_and_crop(img_positive)
+            img_negative = self._apply_roi_and_crop(img_negative)
 
+        # Apply transforms with a shared random seed
         if self.transform:
-            # Use a shared seed so both images get the same random augmentations
             seed = np.random.randint(0, 2**32 - 1)
             random.seed(seed)
             torch.manual_seed(seed)
-            img1 = self.transform(img1)
-
+            img_anchor = self.transform(img_anchor)
             random.seed(seed)
             torch.manual_seed(seed)
-            img2 = self.transform(img2)
+            img_positive = self.transform(img_positive)
+            random.seed(seed)
+            torch.manual_seed(seed)
+            img_negative = self.transform(img_negative)
 
-        return img1, img2, torch.tensor(label, dtype=torch.float32)
+        return img_anchor, img_positive, img_negative, anchor_label
 
     def _apply_roi_and_crop(self, image: Image.Image) -> Image.Image:
         if self.roi_model is None:
