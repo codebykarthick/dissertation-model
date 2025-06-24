@@ -1,0 +1,9 @@
+{
+    "model": "tinyvit",
+    "fold": 2,
+    "accuracy": 0.7333333333333333,
+    "precision": 0.42857142857142855,
+    "recall": 1.0,
+    "f1_score": 0.6,
+    "val_loss": 0.6423548460006714
+}
