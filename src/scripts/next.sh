@@ -10,45 +10,45 @@ python data_setup.py classification
 
 # List of experiments to perform for the next run
 # # Cross Val Baseline
-echo "Running cross validation with baseline setup"
+# echo "Running cross validation with baseline setup"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --label cross_val_baseline
 
 # # Cross Val RoI
-echo "Running cross validation with RoI"
+# echo "Running cross validation with RoI"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --label cross_val_roi
 
 # # # Cross Val Weighted Loss
-echo "Running cross validation with Weighted loss"
+# echo "Running cross validation with Weighted loss"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --weighted_loss --label cross_val_weighted_loss
 
 # # # Cross Val Weighted Sampling
-echo "Running cross validation with weighted sampling"
+# echo "Running cross validation with weighted sampling"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --weighted_sampling --label cross_val_weighted_sampling
 
 # # Cross Val RoI with Weighted Loss
-echo "Running Cross Val RoI with Weighted Loss"
+# echo "Running Cross Val RoI with Weighted Loss"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --label cross_val_roi_weighted_loss
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --label cross_val_roi_weighted_loss
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --label cross_val_roi_weighted_loss
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --label cross_val_roi_weighted_loss
 
 # # Cross Val RoI with Weighted Sampling
-echo "Running Cross Val RoI with Weighted Sampling"
+# echo "Running Cross Val RoI with Weighted Sampling"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label cross_val_roi_weighted_sampling
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label cross_val_roi_weighted_sampling
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label cross_val_roi_weighted_sampling
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label cross_val_roi_weighted_sampling
 
 # # Cross Val RoI with Both
-echo "Running Cross Val RoI with Both Weighted Loss and Sampling"
+# echo "Running Cross Val RoI with Both Weighted Loss and Sampling"
 # python runner.py --task_type classification_crossval --models mobilenetv3 efficientnet shufflenet --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --weighted_sampling --label cross_val_roi_weighted_both
-python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --weighted_sampling --label cross_val_roi_weighted_both
+# python runner.py --task_type classification_crossval --models tinyvit --mode train --epochs 60 --lr 1e-4 --batch 32 --workers 8 --patience 10 --roi --weighted_loss --weighted_sampling --label cross_val_roi_weighted_both
 # python runner.py --task_type classification_crossval --models cnn --mode train --epochs 70 --lr 1e-3 --batch 32 --workers 8 --patience 10 --roi --weighted_loss  --weighted_sampling --label cross_val_roi_weighted_both
 
 # Save an instance of the model.
@@ -72,6 +72,14 @@ python runner.py --task_type classification_crossval --models tinyvit --mode tra
 # python runner.py --task_type siamese --models mobilenetv3 --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file mobilenetv3_fold1_2025-06-16_14-25-06.pth
 # python runner.py --task_type siamese --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file efficientnet_fold1_2025-06-16_14-30-18.pth
 
+# # Knowledge Distillation
+# # Training
+echo "Running knowledge distillation training"
+python runner.py --task_type distillation --models student --mode train --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth
+
+# # Evaluation
+# echo "Running knowledge distillation evaluation"
+# python runner.py --task_type distillation --models student --mode train --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --filename
 ### SHUTDOWN POD
 # Check if Commit message is empty
 if [ -z "$COMMIT_MESSAGE" ]; then

@@ -49,10 +49,16 @@ class DistillationTrainer(Trainer):
 
         # Load the model for teacher1
         self.teacher1 = get_efficientnet_tuned().to(self.device)
+        self.model_name = "efficientnet"
         self.load_model(self.teacher1, teacher1)
 
         self.teacher2 = get_shufflenet_tuned().to(self.device)
+        self.model_name = "shufflenet"
         self.load_model(self.teacher2, teacher2)
+
+        self.model_name = model_name
+
+        # Temperature for the loss adjustment
         self.T = temperature
 
         # Freeze teachers and disable training-time behaviors (dropout/BN updates)
@@ -264,18 +270,16 @@ class DistillationTrainer(Trainer):
     def evaluate(self):
         """Final evaluation on the test set."""
         self.log.info("Evaluating on test set")
-        model, _ = self.create_model_from_name(self.model_name, self.task_type)
-        model = model.to(self.device)
-        self.load_model(model, self.filename)
+        self.load_model(self.model, self.filename)
 
-        model.eval()
+        self.model.eval()
         test_preds, test_labels = [], []
         with torch.no_grad():
             for images, labels in self.test_loader:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
 
-                outputs = model(images)
+                outputs = self.model(images)
                 preds = torch.sigmoid(outputs).view(-1).cpu().numpy()
                 test_preds.extend(preds.tolist())
                 test_labels.extend(labels.cpu().numpy())
