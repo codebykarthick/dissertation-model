@@ -49,13 +49,20 @@ def create_parser() -> ArgumentParser:
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
     parser.add_argument("--patience", type=int,
                         help="Patience for early stopping (default = 3)", default=3)
+    parser.add_argument("--teacher1", type=str,
+                        help="Filepath of weights for Teacher 1 (EfficientNet) in Distillation mode.")
+    parser.add_argument("--teacher2", type=str,
+                        help="Filepath of weights for Teacher 2 (ShuffleNet) in Distillation mode.")
+    parser.add_argument("--temperature", type=float,
+                        help="Temperature for the KL Divergences loss for Knowledge Distillation (Defaults to 2.0).", default=2.0)
 
     return parser
 
 
 def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], args: Namespace):
     if args.task_type not in valid_models.keys():
-        parser.error("--type can only be either classification or siamese.")
+        parser.error(
+            f"--type can only be either only: {', '.join([key for key in valid_models.keys()])}")
     if args.mode == 'export':
         if not args.file:
             parser.error(
@@ -64,3 +71,7 @@ def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], ar
         if not args.roi_weight:
             parser.error(
                 '--roi_weight has to be provided to load the YOLO model if classfying with RoI.')
+    if args.task_type == "distillation":
+        if not args.teacher1 or not args.teacher2:
+            parser.error(
+                '--teacher1 and --teacher2 necessary for task_type distillation.')

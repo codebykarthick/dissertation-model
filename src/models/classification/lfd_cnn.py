@@ -44,3 +44,43 @@ class LFD_CNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc1(x)
         return x
+
+
+class KDStudent(nn.Module):
+    """
+    Student model for knowledge distillation.
+    """
+
+    def __init__(self, num_channels=8, dropout_rate=0.2, hidden_units=128):
+        super(KDStudent, self).__init__()
+        self.conv1 = nn.Conv2d(3, num_channels, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(num_channels)
+        self.conv2 = nn.Conv2d(
+            num_channels, 2 * num_channels, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(2 * num_channels)
+        self.conv3 = nn.Conv2d(2 * num_channels, 4 *
+                               num_channels, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(4 * num_channels)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.head = nn.Sequential(
+            nn.Linear(4 * num_channels, hidden_units),
+            nn.BatchNorm1d(hidden_units),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout_rate),
+            nn.Linear(hidden_units, hidden_units // 2),
+            nn.BatchNorm1d(hidden_units // 2),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout_rate),
+            nn.Linear(hidden_units // 2, 1)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.pool(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))
+        x = self.global_avg_pool(x)
+        x = x.view(x.size(0), -1)
+        x = self.head(x)
+        return x

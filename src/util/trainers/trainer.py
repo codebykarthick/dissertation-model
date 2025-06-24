@@ -6,7 +6,7 @@ from datetime import datetime
 
 import torch
 
-from models.classification.lfd_cnn import LFD_CNN
+from models.classification.lfd_cnn import LFD_CNN, KDStudent
 from models.classification.pretrained_models import (
     get_efficientnet_tuned,
     get_mobilenetv3_tuned,
@@ -84,6 +84,9 @@ class Trainer:
             else:
                 self.log.error(f"{name} is not a valid model.")
                 sys.exit(1)
+        elif task_type == "distillation":
+            if name == "student":
+                model = KDStudent()
         else:
             self.log.error(f"{task_type} is not a valid type.")
             sys.exit(1)
