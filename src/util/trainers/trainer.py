@@ -11,6 +11,7 @@ from models.classification.pretrained_models import (
     get_efficientnet_tuned,
     get_mobilenetv3_tuned,
     get_shufflenet_tuned,
+    get_tinyvit_tuned,
 )
 from models.siamese.efficientnet import SiameseEfficientNet
 from models.siamese.mobilenet import SiameseMobileNet
@@ -68,6 +69,8 @@ class Trainer:
                 model = get_efficientnet_tuned()
             elif name == "shufflenet":
                 model = get_shufflenet_tuned()
+            elif name == "tinyvit":
+                model = get_tinyvit_tuned()
             else:
                 self.log.error(f"{name} is not a valid model.")
                 sys.exit(1)

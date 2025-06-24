@@ -1,5 +1,6 @@
 from typing import cast
 
+import timm
 import torch.nn as nn
 import torchvision.models as models
 from torchvision import models
@@ -110,6 +111,43 @@ def get_shufflenet_tuned(dropout_rate=0.3, hidden_units=256) -> ShuffleNetV2:
         nn.ReLU(inplace=True),
         nn.Dropout(dropout_rate),
         # Output layer for binary classification
+        nn.Linear(hidden_units // 2, 1)
+    )
+
+    return model
+
+
+def get_tinyvit_tuned(model_name: str = 'tiny_vit_11m_224.in1k', dropout_rate: float = 0.2, hidden_units: int = 128) -> nn.Module:
+    """Generate a custom fine-tunable instance of TinyViT architecture for the task.
+
+    Args:
+        model_name (str, optional): Name of the TinyViT model in timm. Defaults to 'tiny_vit_11m_224.in1k'.
+        dropout_rate (float, optional): Dropout rate for the classifier. Defaults to 0.2.
+        hidden_units (int, optional): Number of units in the first hidden layer. Defaults to 128.
+
+    Returns:
+        nn.Module: The modified TinyViT model for fine-tuning.
+    """
+    # Create a pretrained TinyViT model
+    model = timm.create_model(model_name, pretrained=True)
+
+    # Freeze all parameters (feature extractor)
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Number of features from the model (embedding dimension)
+    in_features = model.num_features
+
+    # Replace the original classification head with a new sequential head
+    model.head = nn.Sequential(
+        nn.Linear(in_features, hidden_units),
+        nn.BatchNorm1d(hidden_units),
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
+        nn.Linear(hidden_units, hidden_units // 2),
+        nn.BatchNorm1d(hidden_units // 2),
+        nn.ReLU(inplace=True),
+        nn.Dropout(dropout_rate),
         nn.Linear(hidden_units // 2, 1)
     )
 
