@@ -4,7 +4,8 @@ CONSTANTS = {
         "mobilenetv3": "224x224",
         "efficientnet": "224x224",
         "shufflenet": "224x224",
-        "tinyvit": "224x224"
+        "tinyvit": "224x224",
+        "student": "224x224"
     },
     "weights_path": "weights",
     "results_path": "results",
