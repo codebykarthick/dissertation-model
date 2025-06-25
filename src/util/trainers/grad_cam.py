@@ -31,6 +31,8 @@ class GradCamBench(Trainer):
             self.image_dir, roi_enabled=self.roi, roi_weight=self.roi_weight)
         self.model, self.dimensions = self.create_model_from_name(
             self.model_name, self.task_type)
+        # Move model to device
+        self.model = self.model.to(self.device)
 
         # Stratified 80/10/10 split of indices
         all_indices = np.arange(len(base_dataset))
@@ -89,6 +91,10 @@ class GradCamBench(Trainer):
         raise NotImplementedError("Wrong method invoked!")
 
     def evaluate(self):
+        # Move model to device, load weights, and set to evaluation mode
+        self.model = self.model.to(self.device)
+        self.load_model(self.model, self.filename)
+        self.model.eval()
         # Run Grad-CAM and save results
         save_root = os.path.join(
             os.getcwd(), "grad-cam", self.label, self.model_name)
