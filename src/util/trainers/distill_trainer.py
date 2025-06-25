@@ -37,7 +37,7 @@ class DistillationTrainer(Trainer):
     def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
                  is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
                  task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02, filename="",
-                 temperature=2.0, teacher1="", teacher2=""):
+                 temperature=2.0, teacher1: str = "", teacher2: str = "", alpha: float = 0.5):
         super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
                          num_workers=num_workers, roi_weight=roi_weight, k=k,
                          is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
@@ -57,6 +57,7 @@ class DistillationTrainer(Trainer):
         self.load_model(self.teacher2, teacher2)
 
         self.model_name = model_name
+        self.alpha = alpha
 
         # Temperature for the loss adjustment
         self.T = temperature
@@ -161,6 +162,8 @@ class DistillationTrainer(Trainer):
 
     def train(self):
         self.log.info("Starting knowledge distillation training")
+        alpha_init = self.alpha
+        alpha_final = 0.0  # final alpha at last epoch
         # Model, optimizer, scheduler
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -171,6 +174,9 @@ class DistillationTrainer(Trainer):
         no_improve = 0
 
         for epoch in range(1, self.epochs + 1):
+            # Linearly anneal distillation strength
+            alpha_curr = alpha_init * \
+                (1 - epoch / self.epochs) + alpha_final * (epoch / self.epochs)
             self.model.train()
             for images, labels in tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', leave=False):
                 images = images.to(self.device)
@@ -180,13 +186,26 @@ class DistillationTrainer(Trainer):
                 with torch.no_grad():
                     t1_logits = self.teacher1(images)
                     t2_logits = self.teacher2(images)
-                    teacher_logits = (t1_logits + t2_logits) / 2
+                    # Ensemble teacher probabilities at softened distributions
+                    t1_two_logits = torch.cat(
+                        [torch.zeros_like(t1_logits), t1_logits], dim=1)
+                    t2_two_logits = torch.cat(
+                        [torch.zeros_like(t2_logits), t2_logits], dim=1)
+                    p1 = torch.softmax(t1_two_logits / self.T, dim=1)
+                    p2 = torch.softmax(t2_two_logits / self.T, dim=1)
+                    teacher_soft = (p1 + p2) / 2
 
                 student_logits = self.model(images)
-                # Compute teacher softened probabilities and distillation loss using BCE with logits
-                teacher_prob = torch.sigmoid(teacher_logits / self.T)
-                kd_loss = torch.nn.functional.binary_cross_entropy_with_logits(
-                    student_logits / self.T, teacher_prob
+                # Compute KD loss using KL divergence on 2-class soft distributions
+                # Convert single logit to 2-class logits
+                student_two_logits = torch.cat(
+                    [torch.zeros_like(student_logits), student_logits], dim=1)
+                # Compute soft targets and student log-probabilities
+                student_log_soft = torch.log_softmax(
+                    student_two_logits / self.T, dim=1)
+                # KL divergence loss
+                kd_loss = torch.nn.functional.kl_div(
+                    student_log_soft, teacher_soft, reduction='batchmean'
                 )
                 kd_loss = (self.T * self.T) * kd_loss
 
@@ -195,10 +214,13 @@ class DistillationTrainer(Trainer):
                     student_logits, labels.view(-1, 1).float())
 
                 # Combined loss (equal weighting)
-                loss = 0.5 * kd_loss + 0.5 * sup_loss
+                loss = alpha_curr * kd_loss + (1 - alpha_curr) * sup_loss
 
                 optimizer.zero_grad()
                 loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             # Validation

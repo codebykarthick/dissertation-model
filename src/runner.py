@@ -21,7 +21,7 @@ class Runner:
                  batch_size: int, patience: int,
                  roi: bool, roi_weight: str, fill_noise: bool, num_workers: int, task_type: str,
                  label: str, k: int = 10, filename: str = "", temperature: float = 2.0,
-                 teacher1: str = "", teacher2: str = ""):
+                 teacher1: str = "", teacher2: str = "", alpha: float = 0.5):
         if task_type == "classification_crossval":
             self.trainer = ClassificationCrossValidationTrainer(
                 k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
@@ -46,7 +46,7 @@ class Runner:
                 num_workers=num_workers, k=k, is_sampling_weighted=is_oversampled,
                 is_loss_weighted=is_loss_weighted, batch_size=batch_size, epochs=epochs, lr=lr,
                 task_type=task_type, patience=patience, label=label, filename=filename,
-                temperature=temperature, teacher1=teacher1, teacher2=teacher2)
+                temperature=temperature, teacher1=teacher1, teacher2=teacher2, alpha=alpha)
 
     def train(self):
         self.trainer.train()
@@ -94,12 +94,14 @@ if __name__ == "__main__":
     teacher1 = args.teacher1
     teacher2 = args.teacher2
     temperature = args.temperature
+    alpha = args.alpha
 
     for model_name in list_of_models:
         runner = Runner(lr=lr, epochs=epochs, is_loss_weighted=weighted_loss,
                         is_oversampled=weighted_sampling, batch_size=batch_size, patience=patience,
                         model_name=model_name, roi=roi, roi_weight=roi_weight, fill_noise=fill_noise, num_workers=num_workers,
-                        task_type=task_type, label=label, k=k, filename=file_name, teacher1=teacher1, teacher2=teacher2)
+                        task_type=task_type, label=label, k=k, filename=file_name, teacher1=teacher1, teacher2=teacher2,
+                        temperature=temperature, alpha=alpha)
 
         if mode == "train":
             if not os.path.exists("dataset/Images"):

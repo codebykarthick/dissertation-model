@@ -73,13 +73,31 @@ python data_setup.py classification
 # python runner.py --task_type siamese --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label siamese_fewshot --file efficientnet_fold1_2025-06-16_14-30-18.pth
 
 # # Knowledge Distillation
-# # Training
-echo "Running knowledge distillation training"
-python runner.py --task_type distillation --models student --mode train --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth
+kd_run() {
+  local T="$1"
+  local A="$2"
+  echo "Running KD with Temperature: ${T} and Alpha: ${A}"
+  local dest="./weights/knowledge_distillation_T_${T}_al_${A}"
+  mkdir -p "${dest}/efficientnet"
+  mkdir -p "${dest}/shufflenet"
+  cp "./weights/efficientnet_roi_weighted_sampling/efficientnet/efficientnet_fold1_2025-06-16_15-05-49.pth" "${dest}/efficientnet/"
+  cp "./weights/shufflenet_roi_weighted_sampling/shufflenet/shufflenet_fold1_2025-06-16_15-09-39.pth" "${dest}/shufflenet/"
+  python runner.py --task_type distillation --models student --mode train --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label "knowledge_distillation_T_${T}_al_${A}" --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --temperature ${T} --alpha ${A}
+}
 
-# # Evaluation
-# echo "Running knowledge distillation evaluation"
-# python runner.py --task_type distillation --models student --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --file student_fold1_2025-06-25_08-46-12.pth
+# # Training
+echo "Running knowledge distillation training grid search"
+# Grid search over Temperature and Alpha values
+temperatures=(1.0 2.0 5.0 10.0)
+alphas=(0.2 0.5 0.8)
+for T in "${temperatures[@]}"; do
+  for A in "${alphas[@]}"; do
+    echo "Starting KD run with T=$T, alpha=$A"
+    kd_run "$T" "$A"
+  done
+done
+
+
 ### SHUTDOWN POD
 # Check if Commit message is empty
 if [ -z "$COMMIT_MESSAGE" ]; then

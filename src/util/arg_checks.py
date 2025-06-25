@@ -53,6 +53,8 @@ def create_parser() -> ArgumentParser:
                         help="Filepath of weights for Teacher 1 (EfficientNet) in Distillation mode.")
     parser.add_argument("--teacher2", type=str,
                         help="Filepath of weights for Teacher 2 (ShuffleNet) in Distillation mode.")
+    parser.add_argument("--alpha", type=float, default=0.5,
+                        help="Weighting to be split between Teacher probability loss and actual target loss (Defaults to 0.5).")
     parser.add_argument("--temperature", type=float,
                         help="Temperature for the KL Divergences loss for Knowledge Distillation (Defaults to 2.0).", default=2.0)
 
@@ -75,3 +77,7 @@ def validate_args(parser: ArgumentParser, valid_models: dict[str, list[str]], ar
         if not args.teacher1 or not args.teacher2:
             parser.error(
                 '--teacher1 and --teacher2 necessary for task_type distillation.')
+        if args.alpha < 0 or args.alpha > 1:
+            parser.error(
+                '--alpha must be between 0 and 1.'
+            )
