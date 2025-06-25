@@ -87,6 +87,13 @@ class Trainer:
         elif task_type == "distillation":
             if name == "student":
                 model = KDStudent()
+        elif task_type == "gradcam":
+            if name == "efficientnet":
+                model = get_efficientnet_tuned()
+            elif name == "shufflenet":
+                model = get_shufflenet_tuned()
+            elif name == "student":
+                model = KDStudent()
         else:
             self.log.error(f"{task_type} is not a valid type.")
             sys.exit(1)

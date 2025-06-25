@@ -16,7 +16,15 @@ from util.trainers.trainer import Trainer
 
 
 class GradCamBench(Trainer):
-    def __init__(self) -> None:
+    def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
+                 is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
+                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02, filename=""):
+        super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
+                         num_workers=num_workers, roi_weight=roi_weight, k=k,
+                         is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
+                         epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
+                         label=label, delta=delta, filename=filename)
+
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
         base_dataset = ClassificationDataset(
@@ -63,10 +71,10 @@ class GradCamBench(Trainer):
             self.threshold = 0.5
         elif "efficientnet" in model_name_lower:
             self.target_layer = cast(torch.nn.Module, self.model.features[-1])
-            self.threshold = 0.5
+            self.threshold = 0.56
         elif "shufflenet" in model_name_lower:
             self.target_layer = cast(torch.nn.Module, self.model.conv5)
-            self.threshold = 0.5
+            self.threshold = 0.47
         else:
             # fallback to last convolutional layer
             conv_layers = [m for m in self.model.modules(
@@ -82,7 +90,8 @@ class GradCamBench(Trainer):
 
     def evaluate(self):
         # Run Grad-CAM and save results
-        save_root = os.path.join(os.getcwd(), "grad-cam", self.model_name)
+        save_root = os.path.join(
+            os.getcwd(), "grad-cam", self.label, self.model_name)
         os.makedirs(save_root, exist_ok=True)
 
         # Inverse normalization to recover original image

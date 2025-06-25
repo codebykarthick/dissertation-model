@@ -49,7 +49,10 @@ class Runner:
                 task_type=task_type, patience=patience, label=label, filename=filename,
                 temperature=temperature, teacher1=teacher1, teacher2=teacher2, alpha=alpha)
         elif task_type == "gradcam":
-            self.trainer = GradCamBench()
+            self.trainer = GradCamBench(k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
+                                        epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
+                                        batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
+                                        num_workers=num_workers, task_type=task_type, label=label, filename=filename)
 
     def train(self):
         self.trainer.train()
@@ -69,7 +72,7 @@ if __name__ == "__main__":
         "classification_crossval": ["mobilenetv3", "cnn", "efficientnet", "shufflenet", "tinyvit"],
         "siamese": ["mobilenetv3", "efficientnet", "shufflenet"],
         "distillation": "student",
-        "gradcam": ""
+        "gradcam": ["student", "efficientnet", "shufflenet"]
     }
 
     parser = create_parser()
