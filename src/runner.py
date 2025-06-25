@@ -10,6 +10,7 @@ from util.trainers.classification_trainer import (
     ClassificationTrainer,
 )
 from util.trainers.distill_trainer import DistillationTrainer
+from util.trainers.grad_cam import GradCamBench
 from util.trainers.siamese_trainer import SiameseTrainer
 
 log = setup_logger()
@@ -47,6 +48,8 @@ class Runner:
                 is_loss_weighted=is_loss_weighted, batch_size=batch_size, epochs=epochs, lr=lr,
                 task_type=task_type, patience=patience, label=label, filename=filename,
                 temperature=temperature, teacher1=teacher1, teacher2=teacher2, alpha=alpha)
+        elif task_type == "gradcam":
+            self.trainer = GradCamBench()
 
     def train(self):
         self.trainer.train()
@@ -65,7 +68,8 @@ if __name__ == "__main__":
         "classification": ["mobilenetv3", "cnn", "efficientnet", "shufflenet", "tinyvit"],
         "classification_crossval": ["mobilenetv3", "cnn", "efficientnet", "shufflenet", "tinyvit"],
         "siamese": ["mobilenetv3", "efficientnet", "shufflenet"],
-        "distillation": "student"
+        "distillation": "student",
+        "gradcam": ""
     }
 
     parser = create_parser()
