@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 COMMIT_MESSAGE="$1"
 export YOLO_CONFIG_DIR=/tmp/ultralytics_config
 
