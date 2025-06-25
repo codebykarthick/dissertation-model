@@ -79,7 +79,7 @@ python runner.py --task_type distillation --models student --mode train --batch 
 
 # # Evaluation
 # echo "Running knowledge distillation evaluation"
-# python runner.py --task_type distillation --models student --mode train --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --filename
+# python runner.py --task_type distillation --models student --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --file student_fold1_2025-06-25_08-46-12.pth
 ### SHUTDOWN POD
 # Check if Commit message is empty
 if [ -z "$COMMIT_MESSAGE" ]; then
