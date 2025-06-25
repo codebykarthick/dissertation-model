@@ -91,6 +91,7 @@ class Trainer:
             self.log.error(f"{task_type} is not a valid type.")
             sys.exit(1)
 
+        model = model.to(self.device)
         dimensions = [int(dim) for dim in CONSTANTS["models"][name].split("x")]
 
         return model, dimensions
