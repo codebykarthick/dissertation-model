@@ -7,12 +7,13 @@ import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torchcam.methods import SmoothGradCAMpp
-from torchcam.methods._utils import locate_candidate_layer
 from torchcam.utils import overlay_mask
 from torchvision import transforms
+from torchvision.models import EfficientNet, ShuffleNetV2
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 
+from models.classification.lfd_cnn import KDStudent
 from util.data_loader import ClassificationDataset, generate_eval_transforms
 from util.trainers.trainer import Trainer
 
@@ -68,15 +69,20 @@ class GradCamBench(Trainer):
 
         # Select the threshold based on the model
         model_name_lower = self.model_name.lower()
-        if "kdstudent" in model_name_lower:
+        if isinstance(self.model, KDStudent):
             self.threshold = 0.5
-        elif "efficientnet" in model_name_lower:
+            self.target_layer = self.model.conv3
+        elif isinstance(self.model, EfficientNet):
             self.threshold = 0.56
-        elif "shufflenet" in model_name_lower:
+            last_block = self.model.features[-1]
+            conv_layer = last_block[0]
+            self.target_layer = conv_layer[0]
+        elif isinstance(self.model, ShuffleNetV2):
             self.threshold = 0.47
+            self.target_layer = self.model.conv5[0]
         else:
-            # fallback to last convolutional layer
-            self.threshold = 0.5
+            raise ValueError(
+                f"Incompatible model for GradCAM encountered: {model_name}!")
 
     def evaluate(self):
         self.load_model(self.model, self.filename)
@@ -92,13 +98,11 @@ class GradCamBench(Trainer):
             std=[1/0.229, 1/0.224, 1/0.225]
         )
 
-        # Automatically determine the target convolutional layer for CAM
-        target_layer = locate_candidate_layer(self.model, self.dimensions)
         # Run Smooth Grad-CAM++ with automatic hook handling
         with torch.enable_grad():
             with SmoothGradCAMpp(
                 self.model,
-                target_layer=target_layer,
+                target_layer=self.target_layer,
                 num_samples=8,
                 std=0.2
             ) as cam_extractor:
