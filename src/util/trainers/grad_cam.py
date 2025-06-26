@@ -97,8 +97,9 @@ class GradCamBench(Trainer):
             num_samples=8,
             std=0.2
         ) as cam_extractor:
-            for batch_idx, (images, _) in enumerate(tqdm(self.test_loader, desc="Grad-CAM")):
+            for batch_idx, (images, labels) in enumerate(tqdm(self.test_loader, desc="Grad-CAM")):
                 images = images.to(self.device)
+                labels = labels.to(self.device)
                 outputs = self.model(images)
                 probs = torch.sigmoid(outputs)
                 preds = (probs > self.threshold).int()
@@ -109,6 +110,7 @@ class GradCamBench(Trainer):
 
                     output = outputs[i].unsqueeze(0)
                     pred_class = int(preds[i].item())
+                    label_class = int(labels[i].item())
 
                     # Generate CAM mask for the single-logit output (always channel 0)
                     # As it is a binary classification
@@ -122,5 +124,8 @@ class GradCamBench(Trainer):
                         to_pil_image(activation_map, mode='F'),
                         alpha=0.5
                     )
-                    fname = f"img_{batch_idx}_{i}_pred{pred_class}_score{probs[i].item():.2f}.png"
+                    # Mark whether the prediction was correct
+                    correct = (pred_class == label_class)
+                    status = "correct" if correct else "incorrect"
+                    fname = f"img_{batch_idx}_{i}_pred_{pred_class}_label_{label_class}_{status}_score{probs[i].item():.2f}.png"
                     result.save(os.path.join(save_root, fname))
