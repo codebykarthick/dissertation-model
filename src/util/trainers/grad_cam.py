@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from torchcam.methods import SSCAM, SmoothGradCAMpp
+from torchcam.methods import SmoothGradCAMpp
 from torchcam.utils import overlay_mask
 from torchvision import transforms
 from torchvision.models import EfficientNet, ShuffleNetV2
@@ -86,7 +86,12 @@ class GradCamBench(Trainer):
     def evaluate(self):
         self.load_model(self.model, self.filename)
         self.model.eval()
-        # Run Grad-CAM and save results
+
+        # Ensure model parameters require grad for CAM
+        for param in self.model.parameters():
+            param.requires_grad = True
+
+        # Result directory
         save_root = os.path.join(
             os.getcwd(), "grad-cam", self.label, self.model_name)
         os.makedirs(save_root, exist_ok=True)
@@ -97,43 +102,41 @@ class GradCamBench(Trainer):
             std=[1/0.229, 1/0.224, 1/0.225]
         )
 
-        # Run SSCAM with automatic hook handling
-        with SSCAM(
-            self.model,
-            target_layer=self.target_layer,
-            batch_size=self.batch_size,
-            num_samples=35,
-            std=2.0
-        ) as cam_extractor:
-            for batch_idx, (images, labels) in enumerate(tqdm(self.test_loader, desc="Grad-CAM")):
+        with SmoothGradCAMpp(
+                self.model, self.target_layer,
+                num_samples=8, std=0.2) as cam_extractor:
+            for images, labels in tqdm(self.test_loader, desc="GradCAM Batch"):
                 images = images.to(self.device)
                 labels = labels.to(self.device)
+
                 outputs = self.model(images)
-                probs = torch.sigmoid(outputs)
-                preds = (probs > self.threshold).int()
 
-                for i in tqdm(range(images.size(0)), desc=f"Sub batch process"):
-                    # Single image tensor [C,H,W]
-                    image_tensor = images[i]
+                # For binary single-logit models, always target the single output at index 0
+                activation_maps = cam_extractor(0, outputs)
 
-                    output = outputs[i].unsqueeze(0)
-                    pred_class = int(preds[i].item())
-                    label_class = int(labels[i].item())
+                for i in tqdm(range(images.size(0)), desc="Sub batch progress"):
+                    img = images[i]
+                    # Inverse normalize and clamp to [0,1]
+                    img_reverted = inv_normalize(img).clamp(0.0, 1.0)
 
-                    # Generate CAM mask for the single-logit output (always channel 0)
-                    # As it is a binary classification
-                    activation_map = cam_extractor(
-                        class_idx=0, scores=output)[0].cpu()
-                    # Directly overlay mask without interpolation
-                    unnormal_img = inv_normalize(
-                        image_tensor.cpu()).clamp(0.0, 1.0)
+                    # Extract the CAM for this sample and squeeze channel dim
+                    cam_map = activation_maps[i]
+                    if not isinstance(cam_map, np.ndarray):
+                        cam_map = cam_map.cpu().numpy()
+                    cam_map = np.squeeze(cam_map)
+
+                    # Overlay the heatmap onto the original image
                     result = overlay_mask(
-                        to_pil_image(unnormal_img),
-                        to_pil_image(activation_map[0], mode='F'),
+                        to_pil_image(img_reverted),
+                        to_pil_image(cam_map, mode='F'),
                         alpha=0.5
                     )
-                    # Mark whether the prediction was correct
-                    correct = (pred_class == label_class)
-                    status = "correct" if correct else "incorrect"
-                    fname = f"img_{batch_idx}_{i}_pred_{pred_class}_label_{label_class}_{status}_score{probs[i].item():.2f}.png"
+
+                    # Compute prediction, label, and save overlay with status and score
+                    output_i = outputs[i]
+                    score = torch.sigmoid(output_i).item()
+                    pred = int(score > self.threshold)
+                    label_i = int(labels[i].item())
+                    status = "correct" if pred == label_i else "incorrect"
+                    fname = f"img_{i}_pred_{pred}_{status}_score{score:.2f}.png"
                     result.save(os.path.join(save_root, fname))
