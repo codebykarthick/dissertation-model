@@ -3,9 +3,10 @@ from typing import cast
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from torchcam.methods import GradCAM
+from torchcam.methods import SmoothGradCAMpp
 from torchcam.utils import overlay_mask
 from torchvision import transforms
 from torchvision.transforms.functional import to_pil_image
@@ -61,38 +62,22 @@ class GradCamBench(Trainer):
         self.test_loader = DataLoader(
             test_subset,
             batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            pin_memory=True
+            shuffle=False
         )
 
-        # Depending on the model name choose the target layer.
+        # Select the threshold based on the model
         model_name_lower = self.model_name.lower()
         if "kdstudent" in model_name_lower:
-            self.target_layer = cast(torch.nn.Module, self.model.conv3)
             self.threshold = 0.5
         elif "efficientnet" in model_name_lower:
-            self.target_layer = cast(torch.nn.Module, self.model.features[-1])
             self.threshold = 0.56
         elif "shufflenet" in model_name_lower:
-            self.target_layer = cast(torch.nn.Module, self.model.conv5)
             self.threshold = 0.47
         else:
             # fallback to last convolutional layer
-            conv_layers = [m for m in self.model.modules(
-            ) if isinstance(m, torch.nn.Conv2d)]
-            self.target_layer = cast(torch.nn.Module, conv_layers[-1])
             self.threshold = 0.5
 
-    def train(self):
-        raise NotImplementedError("Wrong method invoked!")
-
-    def export(self):
-        raise NotImplementedError("Wrong method invoked!")
-
     def evaluate(self):
-        # Move model to device, load weights, and set to evaluation mode
-        self.model = self.model.to(self.device)
         self.load_model(self.model, self.filename)
         self.model.eval()
         # Run Grad-CAM and save results
@@ -106,8 +91,12 @@ class GradCamBench(Trainer):
             std=[1/0.229, 1/0.224, 1/0.225]
         )
 
-        # Run Grad-CAM with automatic hook handling
-        with GradCAM(self.model, target_layer=self.target_layer) as cam_extractor:
+        # Run Smooth Grad-CAM++ with automatic hook handling
+        with SmoothGradCAMpp(
+            self.model,
+            num_samples=8,
+            std=0.2
+        ) as cam_extractor:
             for batch_idx, (images, _) in enumerate(tqdm(self.test_loader, desc="Grad-CAM")):
                 images = images.to(self.device)
                 outputs = self.model(images)
@@ -115,23 +104,23 @@ class GradCamBench(Trainer):
                 preds = (probs > self.threshold).int()
 
                 for i in range(images.size(0)):
-                    img_tensor = images[i].unsqueeze(0)
+                    # Single image tensor [C,H,W]
+                    image_tensor = images[i]
+
                     output = outputs[i].unsqueeze(0)
                     pred_class = int(preds[i].item())
 
-                    # Generate CAM mask
+                    # Generate CAM mask for the single-logit output (always channel 0)
+                    # As it is a binary classification
                     activation_map = cam_extractor(
-                        class_idx=pred_class, scores=output
-                    )[0].cpu()
-                    heatmap = to_pil_image(activation_map)
-
-                    # Recover original image from normalized tensor
-                    unnorm_img = inv_normalize(images[i].cpu())
-                    orig_img = to_pil_image(unnorm_img)
-
-                    # Overlay heatmap
-                    overlay = overlay_mask(orig_img, heatmap, alpha=0.5)
-
-                    # Save overlay
+                        class_idx=0, scores=output)[0].cpu()
+                    # Directly overlay mask without interpolation
+                    unnormal_img = inv_normalize(
+                        image_tensor.cpu()).clamp(0.0, 1.0)
+                    result = overlay_mask(
+                        to_pil_image(unnormal_img),
+                        to_pil_image(activation_map, mode='F'),
+                        alpha=0.5
+                    )
                     fname = f"img_{batch_idx}_{i}_pred{pred_class}_score{probs[i].item():.2f}.png"
-                    overlay.save(os.path.join(save_root, fname))
+                    result.save(os.path.join(save_root, fname))
