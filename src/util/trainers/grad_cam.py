@@ -68,7 +68,6 @@ class GradCamBench(Trainer):
         )
 
         # Select the threshold based on the model
-        model_name_lower = self.model_name.lower()
         if isinstance(self.model, KDStudent):
             self.threshold = 0.5
             self.target_layer = self.model.conv3
@@ -76,10 +75,10 @@ class GradCamBench(Trainer):
             self.threshold = 0.56
             last_block = self.model.features[-1]
             conv_layer = last_block[0]
-            self.target_layer = conv_layer[0]
+            self.target_layer = conv_layer
         elif isinstance(self.model, ShuffleNetV2):
             self.threshold = 0.47
-            self.target_layer = self.model.conv5[0]
+            self.target_layer = self.model.conv5
         else:
             raise ValueError(
                 f"Incompatible model for GradCAM encountered: {model_name}!")
@@ -130,7 +129,7 @@ class GradCamBench(Trainer):
                             image_tensor.cpu()).clamp(0.0, 1.0)
                         result = overlay_mask(
                             to_pil_image(unnormal_img),
-                            to_pil_image(activation_map, mode='F'),
+                            to_pil_image(activation_map[0], mode='F'),
                             alpha=0.5
                         )
                         # Mark whether the prediction was correct
