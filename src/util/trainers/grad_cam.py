@@ -120,15 +120,11 @@ class GradCamBench(Trainer):
                     img_reverted = inv_normalize(img).clamp(0.0, 1.0)
 
                     # Extract the CAM for this sample and squeeze channel dim
-                    cam_map = activation_maps[i]
-                    if not isinstance(cam_map, np.ndarray):
-                        cam_map = cam_map.cpu().numpy()
-                    cam_map = np.squeeze(cam_map)
-
+                    activation_map = activation_maps[i]
                     # Overlay the heatmap onto the original image
                     result = overlay_mask(
                         to_pil_image(img_reverted),
-                        to_pil_image(cam_map, mode='F'),
+                        to_pil_image(activation_map[0].squeeze(0), mode='F'),
                         alpha=0.5
                     )
 
