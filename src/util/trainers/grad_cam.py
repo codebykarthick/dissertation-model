@@ -112,7 +112,7 @@ class GradCamBench(Trainer):
                     probs = torch.sigmoid(outputs)
                     preds = (probs > self.threshold).int()
 
-                    for i in range(images.size(0)):
+                    for i in tqdm(range(images.size(0)), desc=f"Batch {batch_idx+1}", leave=False):
                         # Single image tensor [C,H,W]
                         image_tensor = images[i]
 
