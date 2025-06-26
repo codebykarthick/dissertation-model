@@ -113,18 +113,22 @@ class GradCamBench(Trainer):
 
                 # For binary single-logit models, always target the single output at index 0
                 activation_maps = cam_extractor(0, outputs)
+                # cam_extractor returns a list (one entry per target layer); extract our single layer's tensor
+                # Tensor shape: [batch_size, H, W]
+                activation_maps = activation_maps[0]
 
                 for i in tqdm(range(images.size(0)), desc="Sub batch progress"):
                     img = images[i]
                     # Inverse normalize and clamp to [0,1]
                     img_reverted = inv_normalize(img).clamp(0.0, 1.0)
 
-                    # Extract the CAM for this sample and squeeze channel dim
-                    activation_map = activation_maps[i]
+                    # Extract the CAM for this sample
+                    cam_map = activation_maps[i]  # shape: [H, W]
+                    cam_map = cam_map.cpu().detach()
                     # Overlay the heatmap onto the original image
                     result = overlay_mask(
                         to_pil_image(img_reverted),
-                        to_pil_image(activation_map[0].squeeze(0), mode='F'),
+                        to_pil_image(cam_map, mode='F'),
                         alpha=0.5
                     )
 
