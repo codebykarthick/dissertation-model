@@ -11,6 +11,7 @@ from util.trainers.classification_trainer import (
 )
 from util.trainers.distill_trainer import DistillationTrainer
 from util.trainers.grad_cam import GradCamBench
+from util.trainers.mc_dropout_trainer import MCDropoutTrainer
 from util.trainers.siamese_trainer import SiameseTrainer
 
 log = setup_logger()
@@ -53,6 +54,11 @@ class Runner:
                                         epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
                                         batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
                                         num_workers=num_workers, task_type=task_type, label=label, filename=filename)
+        elif task_type == "mcdropout":
+            self.trainer = MCDropoutTrainer(k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
+                                            epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
+                                            batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
+                                            num_workers=num_workers, task_type=task_type, label=label, filename=filename)
 
     def train(self):
         self.trainer.train()
@@ -72,7 +78,8 @@ if __name__ == "__main__":
         "classification_crossval": ["mobilenetv3", "cnn", "efficientnet", "shufflenet", "tinyvit"],
         "siamese": ["mobilenetv3", "efficientnet", "shufflenet"],
         "distillation": "student",
-        "gradcam": ["student", "efficientnet", "shufflenet"]
+        "gradcam": ["student", "efficientnet", "shufflenet"],
+        "mcdropout": ["efficientnet", "shufflenet"]
     }
 
     parser = create_parser()

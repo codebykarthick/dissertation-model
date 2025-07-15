@@ -87,7 +87,7 @@ class Trainer:
         elif task_type == "distillation":
             if name == "student":
                 model = KDStudent()
-        elif task_type == "gradcam":
+        elif task_type == "gradcam" or task_type == "mcdropout":
             if name == "efficientnet":
                 model = get_efficientnet_tuned()
             elif name == "shufflenet":
@@ -184,7 +184,7 @@ class Trainer:
         torch.save(model.state_dict(), model_filepath)
         self.log.info(f"Model saved in: {filename}")
 
-    def save_results(self, metrics: dict[str, float], filename="sample.json"):
+    def save_results(self, metrics: dict[str, float] | list, filename="sample.json"):
         """Save the result metrics as a json file
 
         Args:
