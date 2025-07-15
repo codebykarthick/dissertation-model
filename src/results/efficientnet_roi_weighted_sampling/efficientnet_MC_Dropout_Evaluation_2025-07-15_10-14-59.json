@@ -1,0 +1,152 @@
+[
+    {
+        "true_label": 0,
+        "probability": 0.3062921464443207,
+        "uncertainty": 0.1267228126525879
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3236982524394989,
+        "uncertainty": 0.06502716988325119
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4350135028362274,
+        "uncertainty": 0.12451071292161942
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3256415128707886,
+        "uncertainty": 0.16643548011779785
+    },
+    {
+        "true_label": 0,
+        "probability": 0.32933732867240906,
+        "uncertainty": 0.114683598279953
+    },
+    {
+        "true_label": 1,
+        "probability": 0.6985206007957458,
+        "uncertainty": 0.08988725394010544
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5016779899597168,
+        "uncertainty": 0.1329171061515808
+    },
+    {
+        "true_label": 0,
+        "probability": 0.26880624890327454,
+        "uncertainty": 0.11144194006919861
+    },
+    {
+        "true_label": 1,
+        "probability": 0.6663652062416077,
+        "uncertainty": 0.1287623643875122
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5639958381652832,
+        "uncertainty": 0.12569789588451385
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3774104714393616,
+        "uncertainty": 0.08821219950914383
+    },
+    {
+        "true_label": 0,
+        "probability": 0.48090705275535583,
+        "uncertainty": 0.0894775539636612
+    },
+    {
+        "true_label": 1,
+        "probability": 0.4269692003726959,
+        "uncertainty": 0.12395161390304565
+    },
+    {
+        "true_label": 0,
+        "probability": 0.37776097655296326,
+        "uncertainty": 0.13457714021205902
+    },
+    {
+        "true_label": 0,
+        "probability": 0.480658620595932,
+        "uncertainty": 0.12300591915845871
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4537486135959625,
+        "uncertainty": 0.1321479231119156
+    },
+    {
+        "true_label": 0,
+        "probability": 0.37695422768592834,
+        "uncertainty": 0.12668778002262115
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3066502511501312,
+        "uncertainty": 0.0813760757446289
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3637874722480774,
+        "uncertainty": 0.09820117801427841
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5457181334495544,
+        "uncertainty": 0.08564165234565735
+    },
+    {
+        "true_label": 1,
+        "probability": 0.8630768656730652,
+        "uncertainty": 0.05125570297241211
+    },
+    {
+        "true_label": 0,
+        "probability": 0.49655038118362427,
+        "uncertainty": 0.10362960398197174
+    },
+    {
+        "true_label": 1,
+        "probability": 0.718156635761261,
+        "uncertainty": 0.14200229942798615
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4137668311595917,
+        "uncertainty": 0.09836805611848831
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7172989249229431,
+        "uncertainty": 0.14875370264053345
+    },
+    {
+        "true_label": 0,
+        "probability": 0.2565646469593048,
+        "uncertainty": 0.09963511675596237
+    },
+    {
+        "true_label": 0,
+        "probability": 0.6230804324150085,
+        "uncertainty": 0.11554219573736191
+    },
+    {
+        "true_label": 0,
+        "probability": 0.6312007308006287,
+        "uncertainty": 0.0773332342505455
+    },
+    {
+        "true_label": 0,
+        "probability": 0.521425724029541,
+        "uncertainty": 0.06909728050231934
+    },
+    {
+        "true_label": 0,
+        "probability": 0.43525800108909607,
+        "uncertainty": 0.10906291753053665
+    }
+]
