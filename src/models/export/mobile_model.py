@@ -14,18 +14,23 @@ class MobileInferenceModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Normalize input
-        x = x.clone()
         mean = torch.tensor([0.485, 0.456, 0.406],
                             device=x.device).view(1, 3, 1, 1)
         std = torch.tensor([0.229, 0.224, 0.225],
                            device=x.device).view(1, 3, 1, 1)
-        x = (x - mean) / std
 
         # x: (1, C, H, W)
         # Assume output is (N, 6) -> [x1, y1, x2, y2, conf, class]
         yolo_out = self.yolo_model(x)
-        # Take first box tensor: first detection, first four coords
-        box = yolo_out[0, 0, :4]
+        # Select detection with highest confidence from the first image
+        # yolo_out: shape [1, N, 6] -> detections of shape [N, 6]
+        detections = yolo_out[0]
+        # confidences is the 5th column
+        confidences = detections[:, 4]
+        # find index of max confidence
+        best_idx = confidences.argmax()
+        # use the highest-confidence box coordinates
+        box = detections[best_idx, :4]
 
         x1 = int(max(box[0].item(), 0))
         y1 = int(max(box[1].item(), 0))
@@ -52,6 +57,8 @@ class MobileInferenceModel(torch.nn.Module):
             left = (224 - new_w) // 2
             padded[:, :, top:top + new_h, left:left + new_w] = resized_small
             resized = padded
+
+        resized = (resized - mean) / std
 
         probs = torch.zeros((self.num_passes, 1), dtype=torch.float32)
         for i in range(self.num_passes):

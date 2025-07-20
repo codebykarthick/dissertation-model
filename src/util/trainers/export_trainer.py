@@ -37,7 +37,7 @@ class ExportTrainer(Trainer):
         self.model, self.dimensions = self.create_model_from_name(
             model_name, task_type)
         self.yolo_model = YOLO(os.path.join(
-            "weights", "yolo", "yolov11s.pt")).to("cpu").eval()
+            os.getcwd(), "..", "weights", "yolo", "train", "weights", "best.pt")).to("cpu").eval()
         self.export_path = os.path.join(os.getcwd(), "weights", "mobile")
 
         image_dir = os.path.join(os.getcwd(), "dataset")
@@ -133,12 +133,11 @@ class ExportTrainer(Trainer):
 
     def export(self):
         yolo_script_file = os.path.join(
-            "weights", "yolo", "yolov11s.torchscript")
+            os.getcwd(), "..", "weights", "yolo", "train", "weights", "best.torchscript")
         os.makedirs(self.export_path, exist_ok=True)
 
         self.yolo_model.export(
             format="torchscript",
-            imgsz=self.dimensions or 224,
             optimize=True,
             nms=True,
             batch=1,
