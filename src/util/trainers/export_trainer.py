@@ -183,7 +183,7 @@ class ExportTrainer(Trainer):
                 labels = labels.to("cpu")
                 # Perform multiple stochastic forward passes
                 probs = []
-                for _ in range(num_forward_passes):
+                for _ in tqdm(range(num_forward_passes)):
                     mean_probs, std_probs = model(images)
                     # mean_probs is already the mean probability per image
                     preds = mean_probs.view(-1)
