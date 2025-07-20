@@ -83,7 +83,8 @@ if __name__ == "__main__":
         "siamese": ["mobilenetv3", "efficientnet", "shufflenet"],
         "distillation": "student",
         "gradcam": ["student", "efficientnet", "shufflenet"],
-        "mcdropout": ["efficientnet", "shufflenet"]
+        "mcdropout": ["efficientnet", "shufflenet"],
+        "mobile": ["efficientnet", "shufflenet"]
     }
 
     parser = create_parser()

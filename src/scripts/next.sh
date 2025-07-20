@@ -107,10 +107,10 @@ python data_setup.py classification
 # python runner.py --task_type gradcam --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
 # python runner.py --task_type gradcam --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
 
-# MC Dropout
-echo "Running MCDropout inferrence on models"
-python runner.py --task_type mcdropout --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
-python runner.py --task_type mcdropout --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
+# # MC Dropout
+# echo "Running MCDropout inferrence on models"
+# python runner.py --task_type mcdropout --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
+# python runner.py --task_type mcdropout --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
 
 # Converting models to mobile format 
 echo "Converting Full models into torchscript format"

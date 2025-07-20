@@ -88,7 +88,7 @@ class Trainer:
         elif task_type == "distillation":
             if name == "student":
                 model = KDStudent()
-        elif task_type == "gradcam" or task_type == "mcdropout":
+        elif task_type == "gradcam" or task_type == "mcdropout" or task_type == "mobile":
             if name == "efficientnet":
                 model = get_efficientnet_tuned()
             elif name == "shufflenet":
