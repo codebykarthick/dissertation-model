@@ -4,6 +4,7 @@ from typing import cast
 
 import numpy as np
 import torch
+import torch.nn
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
@@ -153,6 +154,12 @@ class ExportTrainer(Trainer):
         log.info("Creating Mobile format instance")
         mobile_model = MobileInferenceModel(
             yolo_model=yolo_torchscript_model, classifier_model=self.model)
+
+        # Prepare MC Dropout: enable dropout at inference by turning on only Dropout modules
+        mobile_model.eval()
+        for module in mobile_model.modules():
+            if isinstance(module, torch.nn.Dropout):
+                module.train()
 
         scripted_model = torch.jit.script(mobile_model)
         mobile_model_path = os.path.join(
