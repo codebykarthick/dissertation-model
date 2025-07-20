@@ -33,12 +33,14 @@ class MobileInferenceModel(torch.nn.Module):
         y2 = int(min(box[3].item(), x.shape[2]))
 
         cropped = x[0:1, :, y1:y2, x1:x2]  # Keep batch dim
-        # Preserve aspect ratio: scale to fit within 224×224, then pad with black
+        # Preserve aspect ratio: scale to fit within 224×224 using scale_factor, then pad with black
         _, _, h, w = cropped.shape
-        scale = min(224 / h, 224 / w)
-        new_h, new_w = int(h * scale), int(w * scale)
-        resized_small = F.interpolate(cropped, size=(
-            new_h, new_w), mode='bilinear', align_corners=False)
+        # compute float scale factor
+        scale = min(224.0 / float(h), 224.0 / float(w))
+        resized_small = F.interpolate(
+            cropped, scale_factor=scale, mode='bilinear', align_corners=False)
+        # extract new spatial dimensions from the resized tensor
+        new_h, new_w = resized_small.shape[-2], resized_small.shape[-1]
         padded = torch.zeros((1, 3, 224, 224), device=x.device)
         top = (224 - new_h) // 2
         left = (224 - new_w) // 2
