@@ -35,17 +35,23 @@ class MobileInferenceModel(torch.nn.Module):
         cropped = x[0:1, :, y1:y2, x1:x2]  # Keep batch dim
         # Preserve aspect ratio: scale to fit within 224×224 using scale_factor, then pad with black
         _, _, h, w = cropped.shape
-        # compute float scale factor
-        scale = min(224.0 / float(h), 224.0 / float(w))
-        resized_small = F.interpolate(
-            cropped, scale_factor=(scale, scale), mode='bilinear', align_corners=False)
-        # extract new spatial dimensions from the resized tensor
-        new_h, new_w = resized_small.shape[-2], resized_small.shape[-1]
-        padded = torch.zeros((1, 3, 224, 224), device=x.device)
-        top = (224 - new_h) // 2
-        left = (224 - new_w) // 2
-        padded[:, :, top:top + new_h, left:left + new_w] = resized_small
-        resized = padded
+        if h == 0 or w == 0:
+            # Fallback to using the full normalized image for classification
+            cropped = x
+            resized = F.interpolate(
+                x, size=(224, 224), mode='bilinear', align_corners=False)
+        else:
+            # Preserve aspect ratio: scale to fit within 224×224 using scale_factor, then pad with black
+            scale = min(224.0 / float(h), 224.0 / float(w))
+            resized_small = F.interpolate(
+                cropped, scale_factor=(scale, scale), mode='bilinear', align_corners=False)
+            # extract new spatial dimensions from the resized tensor
+            new_h, new_w = resized_small.shape[-2], resized_small.shape[-1]
+            padded = torch.zeros((1, 3, 224, 224), device=x.device)
+            top = (224 - new_h) // 2
+            left = (224 - new_w) // 2
+            padded[:, :, top:top + new_h, left:left + new_w] = resized_small
+            resized = padded
 
         probs = torch.zeros((self.num_passes, 1), dtype=torch.float32)
         for i in range(self.num_passes):
