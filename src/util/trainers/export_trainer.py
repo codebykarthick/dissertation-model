@@ -182,7 +182,7 @@ class ExportTrainer(Trainer):
                 images = images.to("cpu")
                 labels = labels.to("cpu")
                 # Process one image at a time for mobile inference
-                for i in range(images.size(0)):
+                for i in tqdm(range(images.size(0))):
                     image = images[i].unsqueeze(0)  # shape: (1, C, H, W)
                     label = labels[i]
                     mean_prob, std_prob = model(image)
