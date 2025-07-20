@@ -207,6 +207,7 @@ class Trainer:
         save_image(image, result_file)
 
     def load_model(self, model: torch.nn.Module, filename: str = "sample.pth"):
+        self.log.info(f"Number of CUDA Devices: {torch.cuda.device_count()}")
         model_weights_dir = os.path.join(
             os.getcwd(), CONSTANTS["weights_path"], self.label, self.model_name)
 
