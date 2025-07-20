@@ -184,8 +184,9 @@ class ExportTrainer(Trainer):
                 # Perform multiple stochastic forward passes
                 probs = []
                 for _ in range(num_forward_passes):
-                    outputs = model(images)
-                    preds = torch.sigmoid(outputs).view(-1)
+                    mean_probs, std_probs = model(images)
+                    # mean_probs is already the mean probability per image
+                    preds = mean_probs.view(-1)
                     probs.append(preds.unsqueeze(0))  # shape: (1, batch_size)
                     # Concatenate and compute mean and std deviation
                 # shape: (num_passes, batch_size)
