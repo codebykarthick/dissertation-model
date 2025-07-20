@@ -178,7 +178,7 @@ class ExportTrainer(Trainer):
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         with torch.no_grad():
-            for images, labels in self.test_loader:
+            for images, labels in tqdm(self.test_loader):
                 images = images.to("cpu")
                 labels = labels.to("cpu")
                 # Perform multiple stochastic forward passes
