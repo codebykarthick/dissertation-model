@@ -112,6 +112,11 @@ echo "Running MCDropout inferrence on models"
 python runner.py --task_type mcdropout --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
 python runner.py --task_type mcdropout --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
 
+# Converting models to mobile format 
+echo "Converting Full models into torchscript format"
+python runner.py --task_type mobile --models efficientnet --mode export --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
+python runner.py --task_type mobile --models shufflenet --mode export --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
+
 ### SHUTDOWN POD
 # Check if Commit message is empty
 if [ -z "$COMMIT_MESSAGE" ]; then
