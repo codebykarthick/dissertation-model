@@ -61,8 +61,10 @@ class Runner:
                                             batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
                                             num_workers=num_workers, task_type=task_type, label=label, filename=filename)
         elif task_type == "mobile":
-            self.trainer = ExportTrainer(
-                model_name=model_name, task_type=task_type, model_filepath=filename, script_modelpath=filename)
+            self.trainer = ExportTrainer(k=k, fill_noise=fill_noise, model_name=model_name, lr=lr,
+                                         epochs=epochs, is_loss_weighted=is_loss_weighted, is_sampling_weighted=is_oversampled,
+                                         batch_size=batch_size, patience=patience, roi=roi, roi_weight=roi_weight,
+                                         num_workers=num_workers, task_type=task_type, label=label, filename=filename)
 
     def train(self):
         self.trainer.train()

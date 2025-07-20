@@ -22,16 +22,21 @@ log = setup_logger()
 
 
 class ExportTrainer(Trainer):
-    def __init__(self, model_name: str, task_type: str, model_filepath: str, script_modelpath: str):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+    def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
+                 is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
+                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02, filename=""):
+        super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
+                         num_workers=num_workers, roi_weight=roi_weight, k=k,
+                         is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
+                         epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
+                         label=label, delta=delta, filename=filename)
+
         self.model_name = model_name
         self.model, self.dimensions = self.create_model_from_name(
             model_name, task_type)
         self.yolo_model = YOLO(os.path.join(
             "weights", "yolo", "yolov11s.pt")).to(self.device).eval()
         self.export_path = os.path.join("weights", "mobile")
-        self.model_filepath = model_filepath
-        self.script_modelpath = script_modelpath
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
@@ -142,7 +147,7 @@ class ExportTrainer(Trainer):
 
         yolo_torchscript_model = YOLO(yolo_script_file)
 
-        self.load_model(self.model, self.model_filepath)
+        self.load_model(self.model, self.filename)
 
         log.info("Creating Mobile format instance")
         mobile_model = MobileInferenceModel(
