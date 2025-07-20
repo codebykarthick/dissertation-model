@@ -24,12 +24,12 @@ class MobileInferenceModel(torch.nn.Module):
         # x: (1, C, H, W)
         # Assume output is (N, 6) -> [x1, y1, x2, y2, conf, class]
         yolo_out = self.yolo_model(x)
-        box = yolo_out[0, 0:4].int()  # Take first box only
+        box = yolo_out[0, 0:4]  # Take first box tensor
 
-        x1 = torch.clamp(box[0], min=0)
-        y1 = torch.clamp(box[1], min=0)
-        x2 = torch.clamp(box[2], max=x.shape[3])
-        y2 = torch.clamp(box[3], max=x.shape[2])
+        x1 = int(max(box[0].item(), 0))
+        y1 = int(max(box[1].item(), 0))
+        x2 = int(min(box[2].item(), x.shape[3]))
+        y2 = int(min(box[3].item(), x.shape[2]))
 
         cropped = x[0:1, :, y1:y2, x1:x2]  # Keep batch dim
         _, _, h, w = cropped.shape
