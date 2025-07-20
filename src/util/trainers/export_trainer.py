@@ -185,7 +185,7 @@ class ExportTrainer(Trainer):
                 for i in tqdm(range(images.size(0))):
                     image = images[i].unsqueeze(0)  # shape: (1, C, H, W)
                     label = labels[i]
-                    mean_prob, std_prob = model(image)
+                    mean_prob, std_prob, cropped = model(image)
                     prob = float(mean_prob.item())
                     uncertainty = float(std_prob.item())
                     image_name = uuid.uuid4().hex + ".jpg"
@@ -195,7 +195,12 @@ class ExportTrainer(Trainer):
                         "uncertainty": uncertainty,
                         "image_name": image_name
                     })
-                    self.save_image(image.squeeze(0).cpu(),
+                    inv_mean = torch.tensor(
+                        [0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+                    inv_std = torch.tensor(
+                        [0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+                    raw_crop = cropped * inv_std + inv_mean
+                    self.save_image(raw_crop.clamp(0, 1),
                                     image_name, "ts_images")
 
         filename = f"{self.model_name}_ts_Evaluation_{timestamp}.json"

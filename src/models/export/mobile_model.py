@@ -12,7 +12,7 @@ class MobileInferenceModel(torch.nn.Module):
         self.classifier_model = classifier_model
         self.num_passes = num_passes
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Normalize input
         x = x.clone()
         mean = torch.tensor([0.485, 0.456, 0.406],
@@ -52,4 +52,4 @@ class MobileInferenceModel(torch.nn.Module):
         mean_prob = probs.mean(dim=0)
         std_prob = probs.std(dim=0)
 
-        return mean_prob, std_prob
+        return mean_prob, std_prob, cropped
