@@ -198,9 +198,9 @@ class Trainer:
         with open(result_file, "w") as f:
             json.dump(metrics, f, indent=4)
 
-    def save_image(self, image, filename="sample.jpg"):
+    def save_image(self, image, filename="sample.jpg", img_dir="images"):
         results_dir = os.path.join(
-            os.getcwd(), "results", self.label, "images")
+            os.getcwd(), "results", self.label, img_dir)
         os.makedirs(results_dir, exist_ok=True)
         result_file = os.path.join(
             results_dir, filename)

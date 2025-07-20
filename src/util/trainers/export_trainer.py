@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime
 from typing import cast
 
@@ -166,3 +167,41 @@ class ExportTrainer(Trainer):
             self.export_path, f"{self.model_name}_mobile.pt")
         scripted_model.save(mobile_model_path)
         log.info(f"Mobile model exported to {mobile_model_path}")
+
+    def evaluate(self, num_forward_passes=10):
+        """Final evaluation on the test set."""
+        self.log.info("Evaluating on test set with MC Dropout")
+        model = torch.jit.load(os.path.join(
+            "weights", "mobile", self.filename))
+
+        results = []
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        with torch.no_grad():
+            for images, labels in self.test_loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                # Perform multiple stochastic forward passes
+                probs = []
+                for _ in range(num_forward_passes):
+                    outputs = model(images)
+                    preds = torch.sigmoid(outputs).view(-1)
+                    probs.append(preds.unsqueeze(0))  # shape: (1, batch_size)
+                    # Concatenate and compute mean and std deviation
+                # shape: (num_passes, batch_size)
+                probs = torch.cat(probs, dim=0)
+                mean_probs = probs.mean(dim=0)
+                std_probs = probs.std(dim=0)
+                for i in range(images.size(0)):
+                    image_name = uuid.uuid4().hex + ".jpg"
+                    results.append({
+                        "true_label": int(labels[i].item()),
+                        "probability": float(mean_probs[i].item()),
+                        "uncertainty": float(std_probs[i].item()),
+                        "image_name": image_name
+                    })
+                    self.save_image(images[i].cpu(),
+                                    f"{image_name}", "ts_images")
+
+        filename = f"{self.model_name}_ts_Evaluation_{timestamp}.json"
+        self.save_results(metrics=results, filename=filename)
