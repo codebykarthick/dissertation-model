@@ -140,7 +140,7 @@ class ExportTrainer(Trainer):
             nms=True,
             batch=1,
             device="cpu",
-            file=yolo_script_file
+            mode="export"
         )
 
         log.info(f"YOLOv11 exported to {yolo_script_file}")
