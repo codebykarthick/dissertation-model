@@ -1,0 +1,182 @@
+[
+    {
+        "true_label": 0,
+        "probability": 0.33013632893562317,
+        "uncertainty": 0.08261793851852417,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.30546101927757263,
+        "uncertainty": 0.1345101296901703,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5238114595413208,
+        "uncertainty": 0.09927599132061005,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.2952911853790283,
+        "uncertainty": 0.1626962572336197,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3007570803165436,
+        "uncertainty": 0.07448847591876984,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7598606944084167,
+        "uncertainty": 0.09432707726955414,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.49159717559814453,
+        "uncertainty": 0.11747181415557861,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.2360135167837143,
+        "uncertainty": 0.07937131822109222,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.5960301756858826,
+        "uncertainty": 0.10029637068510056,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5042296051979065,
+        "uncertainty": 0.1290980875492096,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3535844385623932,
+        "uncertainty": 0.08472669869661331,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.44808751344680786,
+        "uncertainty": 0.0811409130692482,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.43387386202812195,
+        "uncertainty": 0.119704470038414,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.40857672691345215,
+        "uncertainty": 0.1005338728427887,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5476968288421631,
+        "uncertainty": 0.19500592350959778,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.43116965889930725,
+        "uncertainty": 0.12898196280002594,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3217361867427826,
+        "uncertainty": 0.07171832025051117,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.29841890931129456,
+        "uncertainty": 0.08405730128288269,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3336871564388275,
+        "uncertainty": 0.08603537827730179,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.49442315101623535,
+        "uncertainty": 0.17033247649669647,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.8360199928283691,
+        "uncertainty": 0.08519244194030762,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4440189301967621,
+        "uncertainty": 0.10300922393798828,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7654994130134583,
+        "uncertainty": 0.09206406772136688,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.46381235122680664,
+        "uncertainty": 0.1929904967546463,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7226720452308655,
+        "uncertainty": 0.145889014005661,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3677694499492645,
+        "uncertainty": 0.10056709498167038,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5386725068092346,
+        "uncertainty": 0.10835737735033035,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.6186029314994812,
+        "uncertainty": 0.09396355599164963,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5070578455924988,
+        "uncertainty": 0.17412182688713074,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4273485243320465,
+        "uncertainty": 0.12618160247802734,
+        "image_name": "0d7ab31f-2337-4b07-87db-0b0736fa2191.jpg"
+    }
+]

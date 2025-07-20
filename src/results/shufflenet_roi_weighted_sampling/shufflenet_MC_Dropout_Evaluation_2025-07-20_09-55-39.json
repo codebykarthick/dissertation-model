@@ -1,0 +1,182 @@
+[
+    {
+        "true_label": 0,
+        "probability": 0.28363391757011414,
+        "uncertainty": 0.05533462390303612,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4181535243988037,
+        "uncertainty": 0.08188193291425705,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.48236584663391113,
+        "uncertainty": 0.03920106217265129,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5878650546073914,
+        "uncertainty": 0.07278473675251007,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4254685342311859,
+        "uncertainty": 0.09541784971952438,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.4759160578250885,
+        "uncertainty": 0.06678803265094757,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5538607835769653,
+        "uncertainty": 0.07744797319173813,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.34422585368156433,
+        "uncertainty": 0.08869265019893646,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.8449600338935852,
+        "uncertainty": 0.07488051056861877,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.43238702416419983,
+        "uncertainty": 0.08534524589776993,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3249273896217346,
+        "uncertainty": 0.0618046298623085,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.37234729528427124,
+        "uncertainty": 0.11112862080335617,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.5106770992279053,
+        "uncertainty": 0.052537914365530014,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.19662974774837494,
+        "uncertainty": 0.06623005121946335,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.525158703327179,
+        "uncertainty": 0.07151635736227036,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5438095331192017,
+        "uncertainty": 0.11070790886878967,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.33708858489990234,
+        "uncertainty": 0.11619512736797333,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.40600690245628357,
+        "uncertainty": 0.07344906777143478,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.42366907000541687,
+        "uncertainty": 0.08557139337062836,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.46186310052871704,
+        "uncertainty": 0.06639426946640015,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.5783870220184326,
+        "uncertainty": 0.07888344675302505,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.42115887999534607,
+        "uncertainty": 0.07559442520141602,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7985976338386536,
+        "uncertainty": 0.045294154435396194,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.43056750297546387,
+        "uncertainty": 0.07569768279790878,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.5871372818946838,
+        "uncertainty": 0.10086679458618164,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.2302405685186386,
+        "uncertainty": 0.06392259895801544,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5276591181755066,
+        "uncertainty": 0.04189254343509674,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.49961748719215393,
+        "uncertainty": 0.11266744881868362,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5172672271728516,
+        "uncertainty": 0.09505165368318558,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5609886050224304,
+        "uncertainty": 0.07049377262592316,
+        "image_name": "0754fcef-c39e-496e-af7c-87af799a54a2.jpg"
+    }
+]
