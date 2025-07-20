@@ -146,7 +146,7 @@ class ExportTrainer(Trainer):
 
         log.info(f"YOLOv11 exported to {yolo_script_file}")
 
-        yolo_torchscript_model = YOLO(yolo_script_file).to("cpu")
+        yolo_torchscript_model = torch.jit.load(yolo_script_file)
 
         self.load_model(self.model, self.filename)
 
