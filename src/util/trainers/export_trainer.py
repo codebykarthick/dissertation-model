@@ -130,7 +130,8 @@ class ExportTrainer(Trainer):
         self.criterion = criterion
 
     def export(self):
-        yolo_script_file = os.path.join(self.export_path, "yolov11s_script.pt")
+        yolo_script_file = os.path.join(
+            "weights", "yolo", "yolov11s.torchscript")
         os.makedirs(os.path.dirname(self.export_path), exist_ok=True)
 
         self.yolo_model.export(
