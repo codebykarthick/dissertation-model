@@ -24,7 +24,8 @@ class MobileInferenceModel(torch.nn.Module):
         # x: (1, C, H, W)
         # Assume output is (N, 6) -> [x1, y1, x2, y2, conf, class]
         yolo_out = self.yolo_model(x)
-        box = yolo_out[0, 0:4]  # Take first box tensor
+        # Take first box tensor: first detection, first four coords
+        box = yolo_out[0, 0, :4]
 
         x1 = int(max(box[0].item(), 0))
         y1 = int(max(box[1].item(), 0))

@@ -6,7 +6,12 @@ export YOLO_CONFIG_DIR=/tmp/ultralytics_config
 echo "Working directory: $(pwd)"
 
 # Downloading data
-python data_setup.py classification
+if [ ! -d "dataset" ]; then
+  echo "dataset/ not found. Running data_setup..."
+  python data_setup.py classification
+else
+  echo "dataset/ already exists. Skipping data_setup."
+fi
 
 # List of experiments to perform for the next run
 # # Cross Val Baseline
