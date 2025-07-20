@@ -153,7 +153,6 @@ class MCDropoutTrainer(Trainer):
                 # Perform multiple stochastic forward passes
                 probs = []
                 for _ in range(num_forward_passes):
-                    image_name = str(uuid.uuid4()) + ".jpg"
                     outputs = self.model(images)
                     preds = torch.sigmoid(outputs).view(-1)
                     probs.append(preds.unsqueeze(0))  # shape: (1, batch_size)
@@ -163,6 +162,7 @@ class MCDropoutTrainer(Trainer):
                 mean_probs = probs.mean(dim=0)
                 std_probs = probs.std(dim=0)
                 for i in range(images.size(0)):
+                    image_name = uuid.uuid4().hex + ".jpg"
                     results.append({
                         "true_label": int(labels[i].item()),
                         "probability": float(mean_probs[i].item()),

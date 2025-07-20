@@ -101,11 +101,11 @@ python data_setup.py classification
 # echo "Running knowledge distillation evaluation"
 # python runner.py --task_type distillation --models student --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label "knowledge_distillation_T_2.0_al_0.8" --teacher1 efficientnet_fold1_2025-06-16_15-05-49.pth --teacher2 shufflenet_fold1_2025-06-16_15-09-39.pth --temperature 2.0 --alpha 0.8 --file student_fold1_2025-06-25_09-49-39.pth
 
-# Grad CAM Interpretation
-echo "Running grad cam interpretations on models"
-python runner.py --task_type gradcam --models student --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation_T_2.0_al_0.8 --file student_fold1_2025-06-25_09-49-39.pth
-python runner.py --task_type gradcam --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
-python runner.py --task_type gradcam --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
+# # Grad CAM Interpretation
+# echo "Running grad cam interpretations on models"
+# python runner.py --task_type gradcam --models student --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label knowledge_distillation_T_2.0_al_0.8 --file student_fold1_2025-06-25_09-49-39.pth
+# python runner.py --task_type gradcam --models efficientnet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label efficientnet_roi_weighted_sampling --file efficientnet_fold1_2025-06-16_15-05-49.pth
+# python runner.py --task_type gradcam --models shufflenet --mode evaluate --batch 32 --workers 8 --patience 10 --roi --weighted_sampling --label shufflenet_roi_weighted_sampling --file shufflenet_fold1_2025-06-16_15-09-39.pth
 
 # MC Dropout
 echo "Running MCDropout inferrence on models"
