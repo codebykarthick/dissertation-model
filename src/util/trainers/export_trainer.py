@@ -170,17 +170,17 @@ class ExportTrainer(Trainer):
 
     def evaluate(self, num_forward_passes=10):
         """Final evaluation on the test set."""
-        self.log.info("Evaluating on test set with MC Dropout")
+        self.log.info("Evaluating on test set with torchscript models")
         model = torch.jit.load(os.path.join(
-            "weights", "mobile", self.filename))
+            "weights", "mobile", self.filename), map_location="cpu")
 
         results = []
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         with torch.no_grad():
             for images, labels in self.test_loader:
-                images = images.to(self.device)
-                labels = labels.to(self.device)
+                images = images.to("cpu")
+                labels = labels.to("cpu")
                 # Perform multiple stochastic forward passes
                 probs = []
                 for _ in range(num_forward_passes):
