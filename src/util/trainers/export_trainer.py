@@ -148,7 +148,7 @@ class ExportTrainer(Trainer):
 
         yolo_torchscript_model = torch.jit.load(yolo_script_file)
 
-        self.load_model(self.model, self.filename)
+        self.load_model(self.model, self.filename, "cpu")
 
         log.info("Creating Mobile format instance")
         mobile_model = MobileInferenceModel(

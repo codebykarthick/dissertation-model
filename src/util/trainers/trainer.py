@@ -206,7 +206,7 @@ class Trainer:
             results_dir, filename)
         save_image(image, result_file)
 
-    def load_model(self, model: torch.nn.Module, device: str = "", filename: str = "sample.pth"):
+    def load_model(self, model: torch.nn.Module, filename: str = "sample.pth", device: str = ""):
         if device == "":
             device = self.device
 
