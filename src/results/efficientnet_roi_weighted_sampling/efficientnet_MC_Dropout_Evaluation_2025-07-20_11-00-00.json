@@ -1,0 +1,182 @@
+[
+    {
+        "true_label": 0,
+        "probability": 0.25938522815704346,
+        "uncertainty": 0.11662153899669647,
+        "image_name": "9914bd932f344e71824f142e441b71c2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3750417232513428,
+        "uncertainty": 0.07149912416934967,
+        "image_name": "f1d0dba2bd5147a6af75744249f16f23.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5523248910903931,
+        "uncertainty": 0.08755510300397873,
+        "image_name": "1e2c39d059f742189860d3ed34032316.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.297659695148468,
+        "uncertainty": 0.11963312327861786,
+        "image_name": "bd1bb3bffe1943afb76c4aead7df83c2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3625870645046234,
+        "uncertainty": 0.13005389273166656,
+        "image_name": "bcfafd34afae4c8c8df64eddd5e43cf0.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.713809609413147,
+        "uncertainty": 0.09799490869045258,
+        "image_name": "9c179f8ccb55465dbd980beecdaf0adb.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.48681503534317017,
+        "uncertainty": 0.08249016851186752,
+        "image_name": "6cf3c531b25a48eda603112db0839693.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.31014326214790344,
+        "uncertainty": 0.12997159361839294,
+        "image_name": "141f45354b624f9486cec3c5c54215c1.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.6592211723327637,
+        "uncertainty": 0.0818881019949913,
+        "image_name": "2ffefad22e6b4c40875d71f3ae6e3b54.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5489778518676758,
+        "uncertainty": 0.082000732421875,
+        "image_name": "b7a2285d085e40d0a96e822d50563f73.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.41247376799583435,
+        "uncertainty": 0.08065076172351837,
+        "image_name": "bdffb0e7ed2546b4bf018b0e8fd14f29.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4221157729625702,
+        "uncertainty": 0.14059501886367798,
+        "image_name": "c0876949f06d449aa9ce7a37bb979883.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.40428873896598816,
+        "uncertainty": 0.11413753777742386,
+        "image_name": "d2aa871f3aad4c799c7d59b8a7f02569.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.38494807481765747,
+        "uncertainty": 0.12454576045274734,
+        "image_name": "b0b4d8168cfe4d1ab31afd54847a91e2.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.47288092970848083,
+        "uncertainty": 0.12053011357784271,
+        "image_name": "d8a258511e624437a7d9ec79224a6f1e.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5154725909233093,
+        "uncertainty": 0.09724140912294388,
+        "image_name": "37fa6a496991478494c46c8b2b43666f.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3808915317058563,
+        "uncertainty": 0.0903681144118309,
+        "image_name": "b3dc15d010a84a8c8b580589804ee2d3.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3020096719264984,
+        "uncertainty": 0.10439327359199524,
+        "image_name": "67c65b7d5c814a99b1c5c5866b108790.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.37601596117019653,
+        "uncertainty": 0.1280699223279953,
+        "image_name": "ae2e9979680d4d8e8c2b33343f5a08c0.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.461325466632843,
+        "uncertainty": 0.15612046420574188,
+        "image_name": "2b0b78db81ed4430b46c90050f78093f.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.8361076712608337,
+        "uncertainty": 0.08300375938415527,
+        "image_name": "a0076a93824542fda728680b3a2406fd.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.39192837476730347,
+        "uncertainty": 0.12006301432847977,
+        "image_name": "e831e61c90334f5e81e6793f0b4c8402.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.7501001358032227,
+        "uncertainty": 0.14562560617923737,
+        "image_name": "1038674e12fc4ba18fc81a6b527b9098.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.4623578190803528,
+        "uncertainty": 0.13006079196929932,
+        "image_name": "3a11c3320ecb4bf793994f19afa502fe.jpg"
+    },
+    {
+        "true_label": 1,
+        "probability": 0.725597083568573,
+        "uncertainty": 0.06815071403980255,
+        "image_name": "f70c340ec45b403eaf1374dc14f3f3f4.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.28072506189346313,
+        "uncertainty": 0.08051504194736481,
+        "image_name": "c8bf5f2dab83474eb8e8c6de1a0f513b.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.6205002665519714,
+        "uncertainty": 0.1287442445755005,
+        "image_name": "0e7611417a5b431f937227f1a47f2390.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.6866843104362488,
+        "uncertainty": 0.08397801220417023,
+        "image_name": "d4c84afe53eb4a819fb343bc90e50369.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.5687161684036255,
+        "uncertainty": 0.1190093383193016,
+        "image_name": "f11106224c7c46c089bcd89678a09a0c.jpg"
+    },
+    {
+        "true_label": 0,
+        "probability": 0.3645648956298828,
+        "uncertainty": 0.06923236697912216,
+        "image_name": "bc0e2d461cf94406971a3b6bcc82be14.jpg"
+    }
+]
