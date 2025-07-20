@@ -188,7 +188,8 @@ class ExportTrainer(Trainer):
                     mean_prob, std_prob, cropped = model(image)
                     prob = float(mean_prob.item())
                     uncertainty = float(std_prob.item())
-                    image_name = uuid.uuid4().hex + ".jpg"
+                    image_name = str(i) + uuid.uuid4().hex + ".jpg"
+                    self.log.info(f"Processing image: {image_name}")
                     results.append({
                         "true_label": int(label.item()),
                         "probability": prob,
