@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 
 import torch
+from torchvision.utils import save_image
 
 from models.classification.lfd_cnn import LFD_CNN, KDStudent
 from models.classification.pretrained_models import (
@@ -196,6 +197,14 @@ class Trainer:
             results_dir, filename)
         with open(result_file, "w") as f:
             json.dump(metrics, f, indent=4)
+
+    def save_image(self, image, filename="sample.jpg"):
+        results_dir = os.path.join(
+            os.getcwd(), "results", self.label, "images")
+        os.makedirs(results_dir, exist_ok=True)
+        result_file = os.path.join(
+            results_dir, filename)
+        save_image(image, result_file)
 
     def load_model(self, model: torch.nn.Module, filename: str = "sample.pth"):
         model_weights_dir = os.path.join(

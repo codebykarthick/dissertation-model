@@ -1,41 +1,36 @@
 import os
-import uuid
 from datetime import datetime
 from typing import cast
 
 import numpy as np
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    f1_score,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-    roc_curve,
-)
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
+from ultralytics import YOLO
 
+from models.export.mobile_model import MobileInferenceModel
 from util.data_loader import (
     ClassificationDataset,
     generate_eval_transforms,
     generate_train_transforms,
 )
+from util.logger import setup_logger
 from util.trainers.trainer import Trainer
 
+log = setup_logger()
 
-class MCDropoutTrainer(Trainer):
-    def __init__(self, roi: bool, fill_noise: bool, model_name: str, num_workers: int, k: int,
-                 is_sampling_weighted: bool, is_loss_weighted: bool, batch_size: int, epochs: int,
-                 task_type: str, lr: float, patience: int, label: str, roi_weight: str = "", delta=0.02, filename=""):
-        super().__init__(roi=roi, fill_noise=fill_noise, model_name=model_name,
-                         num_workers=num_workers, roi_weight=roi_weight, k=k,
-                         is_sampling_weighted=is_sampling_weighted, is_loss_weighted=is_loss_weighted,
-                         epochs=epochs, task_type=task_type, lr=lr, patience=patience, batch_size=batch_size,
-                         label=label, delta=delta, filename=filename)
+
+class ExportTrainer(Trainer):
+    def __init__(self, model_name: str, task_type: str, model_filepath: str, script_modelpath: str):
+        self.model_name = model_name
+        self.model, self.dimensions = self.create_model_from_name(
+            model_name, task_type)
+        self.yolo_model = YOLO(os.path.join(
+            "weights", "yolo", "yolov11s.pt")).to(self.device).eval()
+        self.export_path = os.path.join("weights", "mobile")
+        self.model_filepath = model_filepath
+        self.script_modelpath = script_modelpath
 
         image_dir = os.path.join(os.getcwd(), "dataset")
         self.image_dir = image_dir
@@ -128,24 +123,48 @@ class MCDropoutTrainer(Trainer):
         )
         self.criterion = criterion
 
-    def mc_dropout(self):
-        # Enable dropout layers during evaluation
+    def export(self):
+        yolo_script_file = os.path.join(self.export_path, "yolov11s_script.pt")
+        os.makedirs(os.path.dirname(self.export_path), exist_ok=True)
+
+        self.yolo_model.export(
+            format="torchscript",
+            imgsz=self.dimensions or 224,
+            optimize=True,
+            nms=True,
+            batch=1,
+            device="cpu",
+            file=yolo_script_file
+        )
+
+        log.info(f"YOLOv11 exported to {yolo_script_file}")
+
+        yolo_torchscript_model = YOLO(yolo_script_file)
+
+        self.load_model(self.model, self.model_filepath)
+
+        log.info("Creating Mobile format instance")
+        mobile_model = MobileInferenceModel(
+            yolo_model=yolo_torchscript_model, classifier_model=self.model)
+
+        scripted_model = torch.jit.script(mobile_model)
+        mobile_model_path = os.path.join(
+            self.export_path, f"{self.model_name}_mobile.pt")
+        scripted_model.save(mobile_model_path)
+        log.info(f"Mobile model exported to {mobile_model_path}")
+
+    def evaluate(self, num_forward_passes=10):
+        """Final evaluation on the test set."""
+        log.info("Evaluating on test set with MC Dropout")
+        self.load_model(self.model, self.model_filepath)
+
+        # Set the MC Dropout mode
         self.model.train()
         for module in self.model.modules():
             if isinstance(module, torch.nn.Dropout):
                 module.train()
 
-    def evaluate(self, num_forward_passes=10):
-        """Final evaluation on the test set."""
-        self.log.info("Evaluating on test set with MC Dropout")
-        self.load_model(self.model, self.filename)
-
-        # Set the MC Dropout mode
-        self.mc_dropout()
-
         results = []
-        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-
         with torch.no_grad():
             for images, labels in self.test_loader:
                 images = images.to(self.device)
@@ -153,11 +172,9 @@ class MCDropoutTrainer(Trainer):
                 # Perform multiple stochastic forward passes
                 probs = []
                 for _ in range(num_forward_passes):
-                    image_name = str(uuid.uuid4()) + ".jpg"
                     outputs = self.model(images)
                     preds = torch.sigmoid(outputs).view(-1)
                     probs.append(preds.unsqueeze(0))  # shape: (1, batch_size)
-                    # Concatenate and compute mean and std deviation
                 # shape: (num_passes, batch_size)
                 probs = torch.cat(probs, dim=0)
                 mean_probs = probs.mean(dim=0)
@@ -166,11 +183,21 @@ class MCDropoutTrainer(Trainer):
                     results.append({
                         "true_label": int(labels[i].item()),
                         "probability": float(mean_probs[i].item()),
-                        "uncertainty": float(std_probs[i].item()),
-                        "image_name": image_name
+                        "uncertainty": float(std_probs[i].item())
                     })
-                    self.save_image(images[i].cpu(),
-                                    f"{image_name}")
 
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         filename = f"{self.model_name}_MC_Dropout_Evaluation_{timestamp}.json"
         self.save_results(metrics=results, filename=filename)
+
+    def test_scripted_model(self):
+        log.info("Loading scripted model for test run")
+        scripted_model = torch.jit.load(self.script_modelpath)
+
+        for images, labels in self.test_loader:
+            input_tensor = images[0:1].to(self.device)
+            with torch.no_grad():
+                prob, uncertainty = scripted_model(input_tensor)
+            log.info(
+                f"Test Run — Probability: {prob.item():.4f}, Uncertainty: {uncertainty.item():.4f}, Label: {labels[0].item()}")
+            break
