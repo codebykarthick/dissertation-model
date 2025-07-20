@@ -23,6 +23,7 @@ log = setup_logger()
 
 class ExportTrainer(Trainer):
     def __init__(self, model_name: str, task_type: str, model_filepath: str, script_modelpath: str):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
         self.model, self.dimensions = self.create_model_from_name(
             model_name, task_type)
