@@ -212,5 +212,6 @@ class Trainer:
 
         model_filepath = os.path.join(model_weights_dir, filename)
 
-        model.load_state_dict(torch.load(model_filepath))
+        model.load_state_dict(torch.load(
+            model_filepath, map_location=self.device))
         self.log.info(f"Model loaded from: {model_filepath}")
