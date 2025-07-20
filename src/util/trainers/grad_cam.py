@@ -4,6 +4,7 @@ from typing import cast
 import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torchcam.methods import SmoothGradCAMpp
@@ -125,12 +126,21 @@ class GradCamBench(Trainer):
                     # Extract the CAM for this sample
                     cam_map = activation_maps[i]  # shape: [H, W]
                     cam_map = cam_map.cpu().detach()
-                    # Overlay the heatmap onto the original image
-                    result = overlay_mask(
-                        to_pil_image(img_reverted),
+
+                    original_img = to_pil_image(img_reverted)
+                    cam_overlay = overlay_mask(
+                        original_img,
                         to_pil_image(cam_map, mode='F'),
                         alpha=0.5
                     )
+                    # Ensure same size
+                    cam_overlay = cam_overlay.resize(original_img.size)
+
+                    # Concatenate side-by-side
+                    combined = Image.new(
+                        'RGB', (original_img.width * 2, original_img.height))
+                    combined.paste(original_img, (0, 0))
+                    combined.paste(cam_overlay, (original_img.width, 0))
 
                     # Compute prediction, label, and save overlay with status and score
                     output_i = outputs[i]
@@ -139,4 +149,4 @@ class GradCamBench(Trainer):
                     label_i = int(labels[i].item())
                     status = "correct" if pred == label_i else "incorrect"
                     fname = f"img_{i}_pred_{pred}_{status}_score{score:.2f}.png"
-                    result.save(os.path.join(save_root, fname))
+                    combined.save(os.path.join(save_root, fname))
