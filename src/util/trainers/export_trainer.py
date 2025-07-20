@@ -181,28 +181,22 @@ class ExportTrainer(Trainer):
             for images, labels in tqdm(self.test_loader):
                 images = images.to("cpu")
                 labels = labels.to("cpu")
-                # Perform multiple stochastic forward passes
-                probs = []
-                for _ in tqdm(range(num_forward_passes)):
-                    mean_probs, std_probs = model(images)
-                    # mean_probs is already the mean probability per image
-                    preds = mean_probs.view(-1)
-                    probs.append(preds.unsqueeze(0))  # shape: (1, batch_size)
-                    # Concatenate and compute mean and std deviation
-                # shape: (num_passes, batch_size)
-                probs = torch.cat(probs, dim=0)
-                mean_probs = probs.mean(dim=0)
-                std_probs = probs.std(dim=0)
+                # Process one image at a time for mobile inference
                 for i in range(images.size(0)):
+                    image = images[i].unsqueeze(0)  # shape: (1, C, H, W)
+                    label = labels[i]
+                    mean_prob, std_prob = model(image)
+                    prob = float(mean_prob.item())
+                    uncertainty = float(std_prob.item())
                     image_name = uuid.uuid4().hex + ".jpg"
                     results.append({
-                        "true_label": int(labels[i].item()),
-                        "probability": float(mean_probs[i].item()),
-                        "uncertainty": float(std_probs[i].item()),
+                        "true_label": int(label.item()),
+                        "probability": prob,
+                        "uncertainty": uncertainty,
                         "image_name": image_name
                     })
-                    self.save_image(images[i].cpu(),
-                                    f"{image_name}", "ts_images")
+                    self.save_image(image.squeeze(0).cpu(),
+                                    image_name, "ts_images")
 
         filename = f"{self.model_name}_ts_Evaluation_{timestamp}.json"
         self.save_results(metrics=results, filename=filename)
