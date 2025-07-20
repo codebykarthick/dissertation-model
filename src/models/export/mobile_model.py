@@ -43,8 +43,6 @@ class MobileInferenceModel(torch.nn.Module):
         padded[:, :, top:top+new_h, left:left+new_w] = resized
         resized = padded
 
-        self.classifier_model.train()  # Enable dropout
-
         probs = torch.zeros((self.num_passes, 1), dtype=torch.float32)
         for i in range(self.num_passes):
             logits = self.classifier_model(resized)

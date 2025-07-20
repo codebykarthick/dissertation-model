@@ -151,15 +151,15 @@ class ExportTrainer(Trainer):
 
         self.load_model(self.model, self.filename, "cpu")
 
+        # Prepare MC Dropout: enable dropout at inference by turning on only Dropout modules
+        self.model.eval()
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.Dropout):
+                module.train()
+
         log.info("Creating Mobile format instance")
         mobile_model = MobileInferenceModel(
             yolo_model=yolo_torchscript_model, classifier_model=self.model)
-
-        # Prepare MC Dropout: enable dropout at inference by turning on only Dropout modules
-        mobile_model.eval()
-        for module in mobile_model.modules():
-            if isinstance(module, torch.nn.Dropout):
-                module.train()
 
         scripted_model = torch.jit.script(mobile_model)
         mobile_model_path = os.path.join(
