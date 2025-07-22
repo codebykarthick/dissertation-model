@@ -1,11 +1,30 @@
 import os
 import random
+from typing import Union
 
+import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from PIL import Image
+from torch.utils.mobile_optimizer import optimize_for_mobile
+from torchvision import transforms
+from torchvision.transforms.functional import to_pil_image, to_tensor
 
 PATH_TO_IMG = os.path.join(os.getcwd(), "..", "dataset", "Images")
+
+
+class ApplyCLAHE:
+    """Applies Contrast Equalisation onto Photos for better contrast.
+    """
+
+    def __call__(self, img):
+        img_np = np.array(img)
+        img_yuv = cv2.cvtColor(img_np, cv2.COLOR_RGB2YUV)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        img_clahe = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
+        return Image.fromarray(img_clahe)
 
 
 def get_random_image(path=PATH_TO_IMG):
@@ -87,3 +106,62 @@ def display_tensor_as_image(tensor: torch.Tensor) -> None:
     plt.imshow(img_np)
     plt.axis('off')
     plt.show()
+
+
+def get_yolo_transform() -> transforms.Compose:
+    """
+    Returns a torchvision transform pipeline for YOLO inference:
+    - Only creates a tensor needed for resize and cropping
+    """
+    return transforms.Compose([
+        transforms.ToTensor()
+    ])
+
+
+def optimize_and_save(model: Union[torch.nn.Module, torch.jit.ScriptModule],
+                      filepath: str,
+                      freeze: bool = False,
+                      save: bool = False) -> torch.jit.ScriptModule:
+    """Optimises the model and saves it in the filepath specified
+
+    Args:
+        model (_type_): _description_
+        path (str): _description_
+        filename (str): _description_
+        freeze (bool, optional): _description_. Defaults to False.
+        save (bool, optional): _description_. Defaults to False.
+    """
+    directory = os.path.dirname(filepath)
+    os.makedirs(directory, exist_ok=True)
+
+    if not isinstance(model, torch.jit.ScriptModule):
+        model = torch.jit.script(model)
+
+    if freeze == True:
+        model = model.eval()
+        model = torch.jit.freeze(model)
+
+    model = optimize_for_mobile(model)
+    if save == True:
+        torch.jit.save(model, filepath)
+
+    return model
+
+
+def resize_and_tensor(tensor: torch.Tensor, img_size: int = 224) -> torch.Tensor:
+    """
+    Resizes the tensor to the given img_size using LANCZOS resampling,
+    and converts it back to a tensor.
+    Assumes input tensor is [1, C, H, W] in range [0, 1].
+    """
+    pil_image = to_pil_image(tensor.squeeze(0))  # [C, H, W] → PIL
+    pil_image.thumbnail(
+        (img_size, img_size), Image.Resampling.LANCZOS)
+    # Create black background and paste resized image centered
+    new_img = Image.new("RGB", (img_size, img_size), (0, 0, 0))
+    left = (img_size - pil_image.size[0]) // 2
+    top = (img_size - pil_image.size[1]) // 2
+    new_img.paste(pil_image, (left, top))
+    new_img = ApplyCLAHE()(new_img)
+    # Convert back to tensor
+    return to_tensor(new_img).unsqueeze(0)
