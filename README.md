@@ -5,7 +5,7 @@ Model architecture, code and weights for MSc Dissertation Project: "Mobile-Optim
 This repository contains the full codebase for the training and evaluation of deep learning models developed for the dissertation project. It includes scripts for data processing, model training, and performance benchmarking, along with the saved results and model weights.
 
 ## Setup
-Create a fresh python virtual environment and run `install.py` to install all the required dependencies. Alternatively, you can manually install the required dependencies using the `full_requirements.txt` file.
+Create a fresh python virtual environment and run `install.py` to install all the required dependencies. Alternatively, you can manually install the required dependencies using the `requirements.txt` file.
 
 ## Runs
 Python bench supports training, validation and evaluation for different methodologies: Conventional classification (fine-tuning and training from scratch), Siamese Few-Shot training, Knowledge Distillation. The training regime and models used are selected based on command-line arguments. Here are a few examples of how to run the bench (assuming the data is already prepared): 
