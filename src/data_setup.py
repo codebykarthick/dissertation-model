@@ -17,6 +17,10 @@ def _download(data_dir: str, download_url: str):
         data_dir (str): The directory to download into.
         download_url (str): The url to download from, assumes the artifact is a zip file.
     """
+    if download_url == "NULL":
+        logger.info(
+            "URL not specified please add your url to download the dataset!")
+        sys.exit(1)
     # Create 'dataset' folder or clear it if it already exists
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
@@ -40,7 +44,7 @@ def download_classification_dataset():
 
     data_dir = os.path.join(os.getcwd(), "dataset")
     _download(data_dir=data_dir,
-              download_url="https://drive.google.com/uc?id=1I9XWVEN-aFm1_sdtvJsgKnJjUH2fS3Xg")
+              download_url="NULL")
 
 
 def download_yolo_dataset():
@@ -48,7 +52,7 @@ def download_yolo_dataset():
     """
     data_dir = os.path.join(os.getcwd(), "dataset", "roi")
     _download(data_dir=data_dir,
-              download_url="https://drive.google.com/uc?id=1vMiqywMd-wlJOS8xYortG4aN69EHkNGZ")
+              download_url="NULL")
 
 
 if __name__ == "__main__":
