@@ -1,8 +1,20 @@
 # Dissertation: Model Repo
 Model architecture, code and weights for MSc Dissertation Project: "Mobile-Optimised Deep Learning Framework for Interpretable Detection of Fungal Keratitis via Lateral Flow Device Imagery".
 
+### Important Info
+The original dataset used in this dissertation involved private medical data and has been stripped to preserve privacy. Users can insert their own data into `src/data/` instead.
+
 ### What's in this repository?
 This repository contains the full codebase for the training and evaluation of deep learning models developed for the dissertation project. It includes scripts for data processing, model training, and performance benchmarking, along with the saved results and model weights.
+
+## Organisation
+* `experiments/` - Contains additional visualisations and tests run to infer data saved in runs.
+* `grad-cam/` - Stores results of Grad-CAM runs of models to see their region of focus on images.
+* `models/` - Model architecture code for fine-tuning and other methodologies.
+* `results/` - Stored metrics of test-set evaluation - AUC-PR, AUC-ROC, F1.
+* `scripts/` - Scripts used for headless, cloud training.
+* `util/` - Utility functions needed for runs.
+* `weights/` - Saved model weights of best runs for each methodology per architecture.
 
 ## Setup
 Create a fresh python virtual environment and run `install.py` to install all the required dependencies. Alternatively, you can manually install the required dependencies using the `requirements.txt` file.
@@ -27,8 +39,39 @@ python runner.py --task_type classification --models efficientnet --mode evaluat
 
 Since the test bench switches the type of training, regime used and models trained based on the command arguments passed, please refer to the code and `scripts/next.sh` for more parameters and running commands.
 
-## Saved Results
-All the saved results of experiments are stored at `src/results/`, which are processed and visualised in different jupyter notebooks under `experiements/`.
+## 📊 Results
 
-## Saved Weights
-The weights of models of training runs are stored at `src/weights/`, under the corresponding experiment labels.
+### Held-out Test Set Performance
+- **EfficientNet-B0**
+  - Accuracy: **93.3%**
+  - Precision: **1.00**
+  - Recall: **0.667**
+  - F1: **0.80**
+  - Validation Loss: **0.47** (threshold = 0.56)
+
+- **ShuffleNetV2**
+  - Accuracy: **86.7%**
+  - Precision: **1.00**
+  - Recall: **0.333**
+  - F1: **0.50**
+  - Validation Loss: **0.51** (threshold = 0.47)
+
+---
+
+### AUC Metrics (threshold-independent)
+- **EfficientNet-B0**: PR-AUC **0.880**, ROC-AUC **0.940**  
+- **ShuffleNetV2**: PR-AUC **0.650**, ROC-AUC **0.760**
+
+---
+
+### Mobile Inference (iPhone 11 Benchmarks)
+- All models ran **fully offline** with no network calls.  
+- **ShuffleNetV2** showed the lowest latency and memory usage (< 500 MB).  
+- **Ensemble inference** was slower but still within device constraints.
+
+---
+
+### Interpretability
+- **Grad-CAM** visualisations confirmed EfficientNet focused consistently on the diagnostic lines of the LFDs.  
+- ShuffleNet produced less precise attention maps.
+
